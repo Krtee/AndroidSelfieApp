@@ -14,10 +14,10 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     private SurfaceHolder mHolder;
     private Camera mCamera;
 
-    public CameraPreview(Context context, Camera camera,FaceDetectionListener faceDetectionListener) {
+    public CameraPreview(Context context, Camera camera) {
         super(context);
         mCamera = camera;
-        mCamera.setFaceDetectionListener(faceDetectionListener);
+        //mCamera.setFaceDetectionListener(faceDetectionListener);
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
         mHolder = getHolder();
@@ -30,7 +30,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
 
-            mCamera.startFaceDetection();
+            //mCamera.startFaceDetection();
         } catch (IOException e) {
             Log.d(TAG, "Error setting camera preview: " + e.getMessage());
         }
@@ -71,7 +71,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.setPreviewDisplay(mHolder);
             mCamera.startPreview();
 
-            mCamera.startFaceDetection();
+            //mCamera.startFaceDetection();
 
         } catch (Exception e){
             Log.d(TAG, "Error starting camera preview: " + e.getMessage());

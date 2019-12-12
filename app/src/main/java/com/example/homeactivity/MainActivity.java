@@ -1,136 +1,204 @@
 package com.example.homeactivity;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraX;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCaptureConfig;
+import androidx.camera.core.Preview;
+import androidx.camera.core.PreviewConfig;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.LifecycleOwner;
 
-import android.Manifest;
-import android.content.Context;
+
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
-import android.graphics.SurfaceTexture;
-import android.hardware.camera2.*;
-import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.FaceDetector;
+import android.graphics.Matrix;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Environment;
+import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.FrameLayout;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 
-import java.util.Arrays;
+import java.io.File;
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
-    Camera mCamera;
-    private CameraPreview mPreview;
-    FaceDetectionListener faceDetectionListener;
-    private  Camera.Face[] mFaces;
-    FaceOverlayView mFaceView;
-
+    private int REQUEST_CODE_PERMISSIONS = 101;
+    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE"};
+    TextureView textureView;
+    private ImageCapture imageCapture;
+    private Preview preview;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        textureView = findViewById(R.id.imageView);
 
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.CAMERA}, 1);
+        if(allPermissionsGranted()){
+            startCamera(); //start camera if permission has been granted by user
+        } else{
+            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+        }
+
+        Button createImg = findViewById(R.id.button_capture);
+
+        createImg.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                captureImage();
+            }
+        });
+    }
+
+    private void startCamera() {
+
+        CameraX.unbindAll();
+
+
+        preview =createPreview();
+        imageCapture =createImageCapture();
+        CameraX.bindToLifecycle((LifecycleOwner)this, preview, imageCapture);
+    }
+
+    public Preview createPreview(){
+        PreviewConfig.Builder previewConfigBuilder = new PreviewConfig.Builder();
+        previewConfigBuilder
+                .setLensFacing(CameraX.LensFacing.FRONT);
+
+        PreviewConfig previewConfig = previewConfigBuilder.build();
+
+        preview = new Preview(previewConfig);
+        // Every time the viewfinder is updated, recompute layout
+        preview.setOnPreviewOutputUpdateListener(
+                new Preview.OnPreviewOutputUpdateListener() {
+                    @Override
+                    public void onUpdated(Preview.PreviewOutput output){
+                        ViewGroup parent = (ViewGroup) textureView.getParent();
+                        parent.removeView(textureView);
+                        parent.addView(textureView, 0);
+
+                        textureView.setSurfaceTexture(output.getSurfaceTexture());
+                        updateTransform();
+                    }
+                });
+        return preview;
+    }
+
+    private ImageCapture createImageCapture() {
+        ImageCaptureConfig.Builder imageCaptureConfig = new ImageCaptureConfig.Builder();
+        imageCaptureConfig.setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY);
+        imageCaptureConfig.setLensFacing(CameraX.LensFacing.FRONT);
+
+        // Build the image capture use case and attach button click listener
+        imageCapture = new ImageCapture(imageCaptureConfig.build());
+
+        return imageCapture;
+    }
 
 
 
+    void captureImage(final ImageCaptureCallback imageCaptureCallback) {
+        if (imageCapture != null) {
+
+
+
+            File path = MainActivity.this.getFilesDir();
+
+            File file = new File(path, System.currentTimeMillis()+".png");
+
+            imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
+                @Override
+                public void onImageSaved(@NonNull File file) {
+                    Toast.makeText(MainActivity.this,"Img captured",Toast.LENGTH_SHORT).show();
+                    imageCaptureCallback.onImageCaptured(file);
+                }
+
+                @Override
+                public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
+                    Toast.makeText(MainActivity.this,
+                            message,
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+
+        } else {
+            Toast.makeText(
+                    MainActivity.this,
+                    "You may need to grant the camera permission!",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void updateTransform(){
+        Matrix mx = new Matrix();
+        float w = textureView.getMeasuredWidth();
+        float h = textureView.getMeasuredHeight();
+
+        float cX = w / 2f;
+        float cY = h / 2f;
+
+        int rotationDgr;
+        int rotation = (int)textureView.getRotation();
+
+        switch(rotation){
+            case Surface.ROTATION_0:
+                rotationDgr = 0;
+                break;
+            case Surface.ROTATION_90:
+                rotationDgr = 90;
+                break;
+            case Surface.ROTATION_180:
+                rotationDgr = 180;
+                break;
+            case Surface.ROTATION_270:
+                rotationDgr = 270;
+                break;
+            default:
+                return;
+        }
+
+        mx.postRotate((float)rotationDgr, cX, cY);
+        textureView.setTransform(mx);
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case 1: {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-
-
-                    mCamera = getCameraInstance();
-                    mCamera.setFaceDetectionListener(faceDetectionListener);
-
-                    // Create our Preview view and set it as the content of our activity.
-                    mPreview = new CameraPreview(this, mCamera,faceDetectionListener);
-                    FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-                    preview.addView(mPreview);
-
-
-
-
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    Toast.makeText(MainActivity.this, "Permission denied to read your External storage", Toast.LENGTH_SHORT).show();
-
-                }
-                return;
+        if(requestCode == REQUEST_CODE_PERMISSIONS){
+            if(allPermissionsGranted()){
+                startCamera();
+            } else{
+                Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show();
+                finish();
             }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 
-    public void startFaceDetection(){
-        // Try starting Face Detection
-        Camera.Parameters params = mCamera.getParameters();
+    private boolean allPermissionsGranted(){
 
-        // start face detection only *after* preview has started
-        if (params.getMaxNumDetectedFaces() > 0){
-            // camera supports face detection, so can start it:
-            mCamera.startFaceDetection();
+        for(String permission : REQUIRED_PERMISSIONS){
+            if(ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED){
+                return false;
+            }
         }
+        return true;
     }
 
 
 
-
-    private void releaseCameraAndPreview() {
-        if (mCamera != null) {
-            mCamera.release();
-            mCamera = null;
-        }
-        mPreview.setmCamera(mCamera);
-    }
-    /**Check if this device has a camera*/
-    private boolean checkCameraHardware(Context context) {
-        if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
-            // this device has a camera
-            return true;
-        } else {
-            // no camera on this device
-            return false;
-        }
+    interface ImageCaptureCallback {
+        void onImageCaptured(File image);
     }
 
 
 
-
-    /** A safe way to get an instance of the Camera object.*/
-    public static Camera getCameraInstance(){
-        Camera c = null;
-        try {
-            c = Camera.open(1); // attempt to get a Camera instance
-        }
-        catch (Exception e){
-            // Camera is not available (in use or does not exist)
-        }
-        return c; // returns null if camera is unavailable
-    }
 }
