@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "759171794139",
+    "firebase_url": "https://selfieapp-35af0.firebaseio.com",
+    "project_id": "selfieapp-35af0",
+    "storage_bucket": "selfieapp-35af0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:759171794139:android:53d5ea823f1bfa36b778fe",
+        "android_client_info": {
+          "package_name": "com.example.homeactivity"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "759171794139-dqtasc8vicp1cnpnpedqcurp26t5dfef.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9LWkEsNPnbvd1sA5G5Np4qn0jZWj-mJE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "759171794139-dqtasc8vicp1cnpnpedqcurp26t5dfef.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
