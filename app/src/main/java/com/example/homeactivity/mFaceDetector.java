@@ -22,6 +22,7 @@ public class mFaceDetector implements ImageAnalysis.Analyzer {
                 .setLandmarkMode(FirebaseVisionFaceDetectorOptions.NO_LANDMARKS)
                 .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
                 .build();
+
         detector = FirebaseVision.getInstance()
                 .getVisionFaceDetector(visionRealtimeOptions);
     }

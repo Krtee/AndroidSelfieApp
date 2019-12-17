@@ -21,14 +21,19 @@ import androidx.lifecycle.LifecycleRegistry;
 
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
@@ -41,15 +46,26 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
+import com.google.firebase.ml.vision.face.FirebaseVisionFace;
+import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.Executor;
-import java.util.logging.Handler;
+
+import static androidx.constraintlayout.widget.Constraints.TAG;
 
 public class MainActivity extends Activity implements LifecycleOwner {
     private LifecycleRegistry lifecycleRegistry;
@@ -61,7 +77,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     int DSI_height,DSI_width;
     private Size imageDimension;
     ImageAnalysis imageAnalysis;
-    CameraSource cameraSource;
+    FirebaseVisionFace[] allfaces;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -215,7 +231,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
                     Toast.LENGTH_LONG).show();
         }
     }
-
+    /*
     private void updateTransform(){
         Matrix mx = new Matrix();
         float w = textureView.getMeasuredWidth();
@@ -249,7 +265,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     }
 
 
-    public FaceDetector setFaceDetection(){
+   public FaceDetector setFaceDetection(){
         FaceDetector detector = new FaceDetector.Builder(getApplicationContext())
                 .build();
 
@@ -266,50 +282,96 @@ public class MainActivity extends Activity implements LifecycleOwner {
         return detector;
 
     }
+    private void startCameraSource() {
+
+        // check that the device has play services available.
+        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(
+                getApplicationContext());
+        if (code != ConnectionResult.SUCCESS) {
+            Dialog dlg =
+                    GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
+            dlg.show();
+        }
+
+        if (cameraSource != null) {
+            try {
+                textureView.start(cameraSource, graphicOverlay);
+            } catch (IOException e) {
+                Log.e(TAG, "Unable to start camera source.", e);
+                cameraSource.release();
+                cameraSource = null;
+            }
+        }
+    }*/
 
 
 
 
     private ImageAnalysis createAnalyzer() {
+        HandlerThread analyzerThread = new HandlerThread("FaceDetectionAnalyzer");
+        analyzerThread.start();
+
         ImageAnalysisConfig.Builder analyzerConfig = new ImageAnalysisConfig.Builder()
-                .setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_NEXT_IMAGE);
+                .setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
+                .setCallbackHandler(new Handler(analyzerThread.getLooper()));
 
         // To have a pretty quick analysis a resolution is enough.
-        Size analyzeResolution = new Size(108, 192);
+        Size analyzeResolution = new Size(108, 190);
         analyzerConfig.setTargetResolution(analyzeResolution);
         analyzerConfig.setTargetAspectRatio(new Rational(analyzeResolution.getWidth(), analyzeResolution.getHeight()));
         analyzerConfig.setLensFacing(CameraX.LensFacing.FRONT);
 
-        /*mFaceDetector analyzer = new mFaceDetector();
-        analyzer.setFaceDetectionListener(new mFaceDetector().FaceDetectionListener() {
-            @Override
-            public void onFaceDetected(int faces) {
-                if (faceDetectionListener != null) {
-                    if (lastDetectedFaces != faces) {
-                        lastDetectedFaces = faces;
-                        faceDetectionListener.onFaceDetected(faces);
-                    }
-                }
-            }
+        FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions.Builder()
+                .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
+                .setLandmarkMode(FirebaseVisionFaceDetectorOptions.NO_LANDMARKS)
+                .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
+                .build();
 
-            @Override
-            public void onNoFaceDetected() {
-                if (faceDetectionListener != null) {
-                    if (lastDetectedFaces > 0) {
-                        lastDetectedFaces = 0;
-                        faceDetectionListener.onNoFaceDetected();
-                    }
-                }
-            }
-        });*/
+
+
+        FirebaseVisionFaceDetector detector = FirebaseVision.getInstance().getVisionFaceDetector(options);
+
+
         imageAnalysis = new ImageAnalysis(analyzerConfig.build());
         imageAnalysis.setAnalyzer(
                 new ImageAnalysis.Analyzer() {
                     @Override
                     public void analyze(ImageProxy image, int rotationDegrees) {
-                        // insert your code here.
+                        if (image == null || image.getImage() == null) {
+                            return;
+                        }
+                        Image mediaImage = image.getImage();
+                        FirebaseVisionImage visionImage =
+                                FirebaseVisionImage.fromMediaImage(mediaImage, FirebaseVisionImageMetadata.ROTATION_270);
+
+
+                        detector.detectInImage(visionImage)
+                                .addOnSuccessListener(faces -> {
+                                    if(faces!= null) {
+                                        for (FirebaseVisionFace face : faces) {
+                                            System.out.println(face.getTrackingId());
+                                            System.out.println(face.toString());
+
+                                            Rect rect = face.getBoundingBox();
+                                            rect.set(rect.left * 10, rect.top * 10, rect.right * 10, rect.bottom * 10);
+                                        /*for(FirebaseVisionFace face: faces){
+                                            for(FirebaseVisionFace currentFace: allfaces){
+                                                if(face.getTrackingId()==currentFace.getTrackingId()){
+                                                    currentFace=face;
+                                                }
+                                            }
+                                        }*/
+
+                                        }
+                                    }
+                                })
+                                .addOnFailureListener(stuff ->{System.out.println("fuck.");});
                     }
                 });
+
+
+
+
         return imageAnalysis;
     }
 
