@@ -24,6 +24,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.TypedArray;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.media.Image;
@@ -44,16 +45,9 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.vision.CameraSource;
-import com.google.android.gms.vision.MultiProcessor;
-import com.google.android.gms.vision.face.Face;
-import com.google.android.gms.vision.face.FaceDetector;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
@@ -63,7 +57,6 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.Executor;
 
 import static androidx.constraintlayout.widget.Constraints.TAG;
 
@@ -77,7 +70,8 @@ public class MainActivity extends Activity implements LifecycleOwner {
     int DSI_height,DSI_width;
     private Size imageDimension;
     ImageAnalysis imageAnalysis;
-    FirebaseVisionFace[] allfaces;
+    FrameLayout layout;
+    FaceOverlay faceOverlay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +84,10 @@ public class MainActivity extends Activity implements LifecycleOwner {
         lifecycleRegistry.setCurrentState(Lifecycle.State.CREATED);
 
         textureView = findViewById(R.id.imageView);
+        layout = findViewById(R.id.linearLayout);
+        faceOverlay= findViewById(R.id.filter);
+        faceOverlay.setVisibility(View.GONE);
+
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -103,6 +101,9 @@ public class MainActivity extends Activity implements LifecycleOwner {
         }
 
         Button createImg = findViewById(R.id.button_capture);
+
+        FrameLayout frame = findViewById(R.id.picframe);
+        frame.bringChildToFront(faceOverlay);
 
         ConstraintLayout btnparent= findViewById(R.id.button_parent);
         btnparent.bringChildToFront(createImg);
@@ -231,80 +232,6 @@ public class MainActivity extends Activity implements LifecycleOwner {
                     Toast.LENGTH_LONG).show();
         }
     }
-    /*
-    private void updateTransform(){
-        Matrix mx = new Matrix();
-        float w = textureView.getMeasuredWidth();
-        float h = textureView.getMeasuredHeight();
-
-        float cX = w / 2f;
-        float cY = h / 2f;
-
-        int rotationDgr;
-        int rotation = (int)textureView.getRotation();
-
-        switch(rotation){
-            case Surface.ROTATION_0:
-                rotationDgr = 0;
-                break;
-            case Surface.ROTATION_90:
-                rotationDgr = 90;
-                break;
-            case Surface.ROTATION_180:
-                rotationDgr = 180;
-                break;
-            case Surface.ROTATION_270:
-                rotationDgr = 270;
-                break;
-            default:
-                return;
-        }
-
-        mx.postRotate((float)rotationDgr, cX, cY);
-        textureView.setTransform(mx);
-    }
-
-
-   public FaceDetector setFaceDetection(){
-        FaceDetector detector = new FaceDetector.Builder(getApplicationContext())
-                .build();
-
-        detector.setProcessor(
-                new MultiProcessor.Builder<Face>(new GraphicFaceTrackerFactory())
-                        .build());
-
-        cameraSource = new CameraSource.Builder(MainActivity.this, detector)
-                .setRequestedPreviewSize(640, 480)
-                .setFacing(CameraSource.CAMERA_FACING_BACK)
-                .setRequestedFps(30.0f)
-                .build();
-
-        return detector;
-
-    }
-    private void startCameraSource() {
-
-        // check that the device has play services available.
-        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(
-                getApplicationContext());
-        if (code != ConnectionResult.SUCCESS) {
-            Dialog dlg =
-                    GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
-            dlg.show();
-        }
-
-        if (cameraSource != null) {
-            try {
-                textureView.start(cameraSource, graphicOverlay);
-            } catch (IOException e) {
-                Log.e(TAG, "Unable to start camera source.", e);
-                cameraSource.release();
-                cameraSource = null;
-            }
-        }
-    }*/
-
-
 
 
     private ImageAnalysis createAnalyzer() {
@@ -349,20 +276,19 @@ public class MainActivity extends Activity implements LifecycleOwner {
                                 .addOnSuccessListener(faces -> {
                                     if(faces!= null) {
                                         for (FirebaseVisionFace face : faces) {
-                                            System.out.println(face.getTrackingId());
-                                            System.out.println(face.toString());
 
+                                            faceOverlay.setFace(face);
                                             Rect rect = face.getBoundingBox();
-                                            rect.set(rect.left * 10, rect.top * 10, rect.right * 10, rect.bottom * 10);
-                                        /*for(FirebaseVisionFace face: faces){
-                                            for(FirebaseVisionFace currentFace: allfaces){
-                                                if(face.getTrackingId()==currentFace.getTrackingId()){
-                                                    currentFace=face;
-                                                }
-                                            }
-                                        }*/
+                                            faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
+                                            faceOverlay.rePosistion();
+                                            faceOverlay.setVisibility(View.VISIBLE);
+
+                                            System.out.println(faceOverlay.getX());
 
                                         }
+                                    }
+                                    else{
+                                        faceOverlay.setVisibility(View.GONE);
                                     }
                                 })
                                 .addOnFailureListener(stuff ->{System.out.println("fuck.");});

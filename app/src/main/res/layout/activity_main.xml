@@ -9,7 +9,6 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/button_parent"
         android:layout_width="match_parent"
@@ -26,10 +25,24 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <TextureView
-        android:id="@+id/imageView"
+    <FrameLayout
+        android:id="@+id/picframe"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
+
+        <com.example.homeactivity.FaceOverlay
+            android:id="@+id/filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+        </com.example.homeactivity.FaceOverlay>
+
+        <TextureView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
 
 
 </FrameLayout>
