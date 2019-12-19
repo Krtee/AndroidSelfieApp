@@ -22,9 +22,12 @@ import androidx.lifecycle.LifecycleRegistry;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.media.Image;
@@ -46,6 +49,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.google.firebase.ml.vision.FirebaseVision;
@@ -72,6 +76,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     ImageAnalysis imageAnalysis;
     FrameLayout layout;
     FaceOverlay faceOverlay;
+    boolean overlayShown = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,17 +107,19 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         Button createImg = findViewById(R.id.button_capture);
 
-        FrameLayout frame = findViewById(R.id.picframe);
-        frame.bringChildToFront(faceOverlay);
-
         ConstraintLayout btnparent= findViewById(R.id.button_parent);
         btnparent.bringChildToFront(createImg);
+        createImg.invalidate();
 
-        //ViewCompat.setTranslationZ(createImg,1);
+        ViewCompat.setZ(faceOverlay,1);
+        ViewCompat.setZ(btnparent,2);
 
         createImg.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                for (int i = 0; i < layout.getChildCount(); i++) {
+                    System.out.println(layout.getChildAt(i).getTranslationZ());
+                }
                 captureImage(image -> runOnUiThread(() -> {
                     Intent myIntent = new Intent(MainActivity.this, PreviewActivity.class);
                     myIntent.setData(Uri.fromFile(image));
@@ -135,8 +142,8 @@ public class MainActivity extends Activity implements LifecycleOwner {
     }
 
     public Preview createPreview(){
-        int aspRatioW = textureView.getWidth(); //get width of screen
-        int aspRatioH = textureView.getHeight();//get height
+        int aspRatioW = textureView.getWidth();
+        int aspRatioH = textureView.getHeight();
         setAspectRatioTextureView(720,1280);
         Rational asp = new Rational (aspRatioW, aspRatioH); //aspect ratio
         imageDimension = new Size(aspRatioW, aspRatioH);
@@ -149,6 +156,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
                 .setLensFacing(CameraX.LensFacing.FRONT);
 
         PreviewConfig previewConfig = previewConfigBuilder.build();
+        faceOverlay.setScreen(textureView.getLayoutParams());
 
         preview = new Preview(previewConfig);
         // Every time the viewfinder is updated, recompute layout
@@ -204,16 +212,23 @@ public class MainActivity extends Activity implements LifecycleOwner {
     void captureImage(final ImageCaptureCallback imageCaptureCallback) {
         if (imageCapture != null) {
 
+            ContextWrapper cw = new ContextWrapper(getApplicationContext());
 
-
-            File path = MainActivity.this.getFilesDir();
+            File path = cw.getDir("imageDir", Context.MODE_PRIVATE);
 
             File file = new File(path, System.currentTimeMillis()+".png");
+
 
             imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
                 @Override
                 public void onImageSaved(@NonNull File file) {
                     Toast.makeText(MainActivity.this,"Img captured",Toast.LENGTH_SHORT).show();
+                    try{
+                        Bitmap bits= Helper.rotateandflipBitmap(file,90);
+                    }
+                    catch (IOException e){
+                        Toast.makeText(MainActivity.this,"Couldnt rotate Picture",Toast.LENGTH_SHORT).show();
+                    }
                     imageCaptureCallback.onImageCaptured(file);
                 }
 
@@ -243,13 +258,13 @@ public class MainActivity extends Activity implements LifecycleOwner {
                 .setCallbackHandler(new Handler(analyzerThread.getLooper()));
 
         // To have a pretty quick analysis a resolution is enough.
-        Size analyzeResolution = new Size(108, 190);
+        Size analyzeResolution = new Size(86, 150);
         analyzerConfig.setTargetResolution(analyzeResolution);
         analyzerConfig.setTargetAspectRatio(new Rational(analyzeResolution.getWidth(), analyzeResolution.getHeight()));
         analyzerConfig.setLensFacing(CameraX.LensFacing.FRONT);
 
         FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions.Builder()
-                .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
+                .setPerformanceMode(FirebaseVisionFaceDetectorOptions.FAST)
                 .setLandmarkMode(FirebaseVisionFaceDetectorOptions.NO_LANDMARKS)
                 .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
                 .build();
@@ -274,21 +289,29 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
                         detector.detectInImage(visionImage)
                                 .addOnSuccessListener(faces -> {
-                                    if(faces!= null) {
+                                    if(faces!= null&&faces.size()!=0) {
                                         for (FirebaseVisionFace face : faces) {
 
                                             faceOverlay.setFace(face);
                                             Rect rect = face.getBoundingBox();
                                             faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
                                             faceOverlay.rePosistion();
-                                            faceOverlay.setVisibility(View.VISIBLE);
+                                            faceOverlay.image.invalidate();
+                                            if(!overlayShown){
+                                                faceOverlay.setVisibility(View.VISIBLE);
+                                                overlayShown= true;
+                                            }
 
-                                            System.out.println(faceOverlay.getX());
+                                            int[] loc =new int[2];
+                                            faceOverlay.image.getLocationOnScreen(loc);
+
+                                            System.out.println(loc[0]);
 
                                         }
                                     }
                                     else{
                                         faceOverlay.setVisibility(View.GONE);
+                                        overlayShown=false;
                                     }
                                 })
                                 .addOnFailureListener(stuff ->{System.out.println("fuck.");});
@@ -325,6 +348,19 @@ public class MainActivity extends Activity implements LifecycleOwner {
     }
 
     @Override
+    public void onPause(){
+        super.onPause();
+        CameraX.unbindAll();
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        CameraX.unbindAll();
+    }
+
+
+    @Override
     public void onStart() {
         super.onStart();
         lifecycleRegistry.setCurrentState(Lifecycle.State.STARTED);
@@ -336,9 +372,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
         return lifecycleRegistry;
     }
 
-
-}
-
-interface ImageCaptureCallback {
-    void onImageCaptured(File image);
+    interface ImageCaptureCallback {
+        void onImageCaptured(File image);
+    }
 }

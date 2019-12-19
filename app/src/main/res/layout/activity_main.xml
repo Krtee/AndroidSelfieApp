@@ -18,6 +18,7 @@
             android:id="@+id/button_capture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:translationZ="1dp"
             android:text="Capture"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -26,9 +27,13 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <FrameLayout
-        android:id="@+id/picframe"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+
+        <TextureView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
         <com.example.homeactivity.FaceOverlay
             android:id="@+id/filter"
@@ -36,12 +41,6 @@
             android:layout_height="wrap_content">
 
         </com.example.homeactivity.FaceOverlay>
-
-        <TextureView
-            android:id="@+id/imageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
     </FrameLayout>
 
 
