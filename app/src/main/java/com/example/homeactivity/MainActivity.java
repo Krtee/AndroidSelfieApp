@@ -28,6 +28,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.media.Image;
@@ -52,6 +53,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
@@ -75,8 +77,11 @@ public class MainActivity extends Activity implements LifecycleOwner {
     private Size imageDimension;
     ImageAnalysis imageAnalysis;
     FrameLayout layout;
+    FrameLayout overlayframe;
+    FrameLayout picframe;
     FaceOverlay faceOverlay;
     boolean overlayShown = false;
+    FirebaseVisionFaceDetector detector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +95,9 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         textureView = findViewById(R.id.imageView);
         layout = findViewById(R.id.linearLayout);
+        overlayframe = findViewById(R.id.overlayposi);
+        picframe = findViewById(R.id.imageframe);
+
         faceOverlay= findViewById(R.id.filter);
         faceOverlay.setVisibility(View.GONE);
 
@@ -134,11 +142,12 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         CameraX.unbindAll();
 
+        detector = createDetector();
         imageAnalysis=createAnalyzer();
         preview =createPreview();
         imageCapture =createImageCapture();
 
-        CameraX.bindToLifecycle((LifecycleOwner)this, imageAnalysis, preview, imageCapture);
+        CameraX.bindToLifecycle(this, imageAnalysis, preview, imageCapture);
     }
 
     public Preview createPreview(){
@@ -157,6 +166,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         PreviewConfig previewConfig = previewConfigBuilder.build();
         faceOverlay.setScreen(textureView.getLayoutParams());
+        picframe.setLayoutParams(textureView.getLayoutParams());
 
         preview = new Preview(previewConfig);
         // Every time the viewfinder is updated, recompute layout
@@ -201,7 +211,6 @@ public class MainActivity extends Activity implements LifecycleOwner {
         imageCaptureConfig.setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY);
         imageCaptureConfig.setLensFacing(CameraX.LensFacing.FRONT);
 
-        // Build the image capture use case and attach button click listener
         imageCapture = new ImageCapture(imageCaptureConfig.build());
 
         return imageCapture;
@@ -229,6 +238,48 @@ public class MainActivity extends Activity implements LifecycleOwner {
                     catch (IOException e){
                         Toast.makeText(MainActivity.this,"Couldnt rotate Picture",Toast.LENGTH_SHORT).show();
                     }
+                    CameraX.unbind(imageAnalysis);
+                    Toast.makeText(MainActivity.this,String.valueOf(overlayframe.getLayoutParams().width),Toast.LENGTH_SHORT).show();
+
+
+                    Bitmap pic= BitmapFactory.decodeFile(file.getAbsolutePath());
+                    FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
+                    Bitmap filter;
+
+                    detector.detectInImage(image)
+                            .addOnSuccessListener(firebaseVisionFaces -> {
+                                if(firebaseVisionFaces!= null&&firebaseVisionFaces.size()!=0) {
+                                    for (FirebaseVisionFace face : firebaseVisionFaces) {
+
+                                        faceOverlay.setFace(face);
+                                        Rect rect = face.getBoundingBox();
+                                        faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
+                                        faceOverlay.rePosistion();
+                                        faceOverlay.image.invalidate();
+                                        System.out.println(faceOverlay.getHeight()+ " "+ faceOverlay.getWidth());
+                                    }
+                                }
+                            })
+                            .addOnFailureListener(
+                                    new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            System.out.println(e.getCause());
+                                        }
+                                    });
+
+
+
+                    filter = Helper.loadBitmapFromView(faceOverlay);
+                    System.out.println(filter.getHeight()+ " "+ filter.getWidth());
+                    Bitmap newPic = Helper.overlay(pic, filter,faceOverlay.getMatrix());
+
+                    try{
+                        File newfile = Helper.BitmaptoFile(newPic,file);
+                    }
+                    catch (IOException e){
+                        Toast.makeText(MainActivity.this,"Couldn#t put filter on Pic.",Toast.LENGTH_LONG).show();
+                    }
                     imageCaptureCallback.onImageCaptured(file);
                 }
 
@@ -248,6 +299,20 @@ public class MainActivity extends Activity implements LifecycleOwner {
         }
     }
 
+    private FirebaseVisionFaceDetector createDetector(){
+        FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions.Builder()
+                .setPerformanceMode(FirebaseVisionFaceDetectorOptions.FAST)
+                .setLandmarkMode(FirebaseVisionFaceDetectorOptions.NO_LANDMARKS)
+                .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
+                .build();
+
+
+
+        FirebaseVisionFaceDetector d = FirebaseVision.getInstance().getVisionFaceDetector(options);
+        return d;
+
+    }
+
 
     private ImageAnalysis createAnalyzer() {
         HandlerThread analyzerThread = new HandlerThread("FaceDetectionAnalyzer");
@@ -262,16 +327,6 @@ public class MainActivity extends Activity implements LifecycleOwner {
         analyzerConfig.setTargetResolution(analyzeResolution);
         analyzerConfig.setTargetAspectRatio(new Rational(analyzeResolution.getWidth(), analyzeResolution.getHeight()));
         analyzerConfig.setLensFacing(CameraX.LensFacing.FRONT);
-
-        FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions.Builder()
-                .setPerformanceMode(FirebaseVisionFaceDetectorOptions.FAST)
-                .setLandmarkMode(FirebaseVisionFaceDetectorOptions.NO_LANDMARKS)
-                .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
-                .build();
-
-
-
-        FirebaseVisionFaceDetector detector = FirebaseVision.getInstance().getVisionFaceDetector(options);
 
 
         imageAnalysis = new ImageAnalysis(analyzerConfig.build());
@@ -314,7 +369,12 @@ public class MainActivity extends Activity implements LifecycleOwner {
                                         overlayShown=false;
                                     }
                                 })
-                                .addOnFailureListener(stuff ->{System.out.println("fuck.");});
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        System.out.println(e.getCause());
+                                    }
+                                });
                     }
                 });
 
