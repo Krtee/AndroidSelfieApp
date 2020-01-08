@@ -30,13 +30,13 @@ public class FaceOverlay extends RelativeLayout {
     FirebaseVisionFace face;
     ImageView image;
     Rect facerect;
-    File testfile;
     String path;
     int scalingfact=10;
     ViewGroup.LayoutParams screen;
 
     public FaceOverlay(Context context){
         super(context);
+        init(context);
     }
 
 
@@ -49,8 +49,6 @@ public class FaceOverlay extends RelativeLayout {
     @Override
     public void setLayoutParams(ViewGroup.LayoutParams params) {
         super.setLayoutParams(params);
-        image.postInvalidate();
-
     }
 
     public void init(Context context){
@@ -74,13 +72,15 @@ public class FaceOverlay extends RelativeLayout {
         invalidate();
     }
 
+    public int getFilter(){
+        return R.drawable.peachemoji;
+    }
+
+
     public Rect getFacerect() {
         return facerect;
     }
 
-    public String getTestfile() {
-        return testfile.getAbsolutePath();
-    }
 
     public String getPath() {
         return path;

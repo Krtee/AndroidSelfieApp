@@ -22,21 +22,26 @@ import androidx.lifecycle.LifecycleRegistry;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Rect;
+import android.media.FaceDetector;
 import android.media.Image;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.text.Layout;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Rational;
@@ -49,11 +54,13 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
@@ -63,6 +70,7 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import static androidx.constraintlayout.widget.Constraints.TAG;
 
@@ -82,6 +90,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     FaceOverlay faceOverlay;
     boolean overlayShown = false;
     FirebaseVisionFaceDetector detector;
+    ImageButton gallery;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +106,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
         layout = findViewById(R.id.linearLayout);
         overlayframe = findViewById(R.id.overlayposi);
         picframe = findViewById(R.id.imageframe);
+        gallery = findViewById(R.id.gallery);
 
         faceOverlay= findViewById(R.id.filter);
         faceOverlay.setVisibility(View.GONE);
@@ -113,26 +123,25 @@ public class MainActivity extends Activity implements LifecycleOwner {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
 
-        Button createImg = findViewById(R.id.button_capture);
+        ImageButton createImg = findViewById(R.id.button_capture);
 
-        ConstraintLayout btnparent= findViewById(R.id.button_parent);
+        ConstraintLayout btnparent= findViewById(R.id.bottomBar);
         btnparent.bringChildToFront(createImg);
         createImg.invalidate();
 
-        ViewCompat.setZ(faceOverlay,1);
-        ViewCompat.setZ(btnparent,2);
+        ViewCompat.setZ(faceOverlay,2);
+        ViewCompat.setZ(btnparent,1);
 
         createImg.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i = 0; i < layout.getChildCount(); i++) {
-                    System.out.println(layout.getChildAt(i).getTranslationZ());
-                }
-                captureImage(image -> runOnUiThread(() -> {
-                    Intent myIntent = new Intent(MainActivity.this, PreviewActivity.class);
-                    myIntent.setData(Uri.fromFile(image));
-                    startActivity(myIntent);
-                    })
+                captureImage(image -> new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this,"Worked.",Toast.LENGTH_LONG).show();
+                        gallery.setImageURI(Uri.fromFile());
+                    }
+                }).start()
                 );
             }
         });
@@ -166,7 +175,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         PreviewConfig previewConfig = previewConfigBuilder.build();
         faceOverlay.setScreen(textureView.getLayoutParams());
-        picframe.setLayoutParams(textureView.getLayoutParams());
+        //picframe.setLayoutParams(textureView.getLayoutParams());
 
         preview = new Preview(previewConfig);
         // Every time the viewfinder is updated, recompute layout
@@ -231,62 +240,79 @@ public class MainActivity extends Activity implements LifecycleOwner {
             imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
                 @Override
                 public void onImageSaved(@NonNull File file) {
-                    Toast.makeText(MainActivity.this,"Img captured",Toast.LENGTH_SHORT).show();
-                    try{
-                        Bitmap bits= Helper.rotateandflipBitmap(file,90);
-                    }
-                    catch (IOException e){
-                        Toast.makeText(MainActivity.this,"Couldnt rotate Picture",Toast.LENGTH_SHORT).show();
-                    }
-                    CameraX.unbind(imageAnalysis);
-                    Toast.makeText(MainActivity.this,String.valueOf(overlayframe.getLayoutParams().width),Toast.LENGTH_SHORT).show();
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Bitmap bits = Helper.rotateandflipBitmap(file, 90);
+                            } catch (IOException e) {
+                                Toast.makeText(MainActivity.this, "Couldnt rotate Picture", Toast.LENGTH_SHORT).show();
+                            }
+                            Toast.makeText(MainActivity.this, String.valueOf(overlayframe.getWidth()), Toast.LENGTH_SHORT).show();
 
 
-                    Bitmap pic= BitmapFactory.decodeFile(file.getAbsolutePath());
-                    FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
-                    Bitmap filter;
+                            Bitmap pic = BitmapFactory.decodeFile(file.getAbsolutePath());
+                            FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
 
-                    detector.detectInImage(image)
-                            .addOnSuccessListener(firebaseVisionFaces -> {
-                                if(firebaseVisionFaces!= null&&firebaseVisionFaces.size()!=0) {
-                                    for (FirebaseVisionFace face : firebaseVisionFaces) {
+                            FirebaseVisionFaceDetector detectImage = createDetector();
 
-                                        faceOverlay.setFace(face);
-                                        Rect rect = face.getBoundingBox();
-                                        faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
-                                        faceOverlay.rePosistion();
-                                        faceOverlay.image.invalidate();
-                                        System.out.println(faceOverlay.getHeight()+ " "+ faceOverlay.getWidth());
-                                    }
-                                }
-                            })
-                            .addOnFailureListener(
-                                    new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            System.out.println(e.getCause());
-                                        }
-                                    });
+                            detectImage.detectInImage(image)
+                                    .addOnSuccessListener(
+                                            new OnSuccessListener<List<FirebaseVisionFace>>() {
+                                                @Override
+                                                public void onSuccess(List<FirebaseVisionFace> firebaseVisionFaces) {
+                                                    if (firebaseVisionFaces != null && firebaseVisionFaces.size() != 0) {
+                                                        for (FirebaseVisionFace face : firebaseVisionFaces) {
+
+                                                            Rect rect = face.getBoundingBox();
+                                                            System.out.println("Rect:" + rect.width() + " " + rect.height());
+                                                            int scalingfact = 1;
+                                                            rect.set(rect.left * scalingfact, rect.top * scalingfact, rect.right * scalingfact, rect.bottom * scalingfact);
+
+                                                    /*
+                                                    FaceOverlay photofilter = new FaceOverlay(MainActivity.this);
+                                                    photofilter.setFace(face);
 
 
+                                                    photofilter.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
+                                                    photofilter.setScreen(new FrameLayout.LayoutParams(pic.getWidth(),pic.getHeight()));
+                                                    photofilter.rePosistion();
+                                                    System.out.println(photofilter.screen.width+ " "+photofilter.image.getWidth()+ " "+ pic.getWidth());
+                                                    Bitmap filter = Helper.loadBitmapFromView(photofilter);
 
-                    filter = Helper.loadBitmapFromView(faceOverlay);
-                    System.out.println(filter.getHeight()+ " "+ filter.getWidth());
-                    Bitmap newPic = Helper.overlay(pic, filter,faceOverlay.getMatrix());
+                                                    Bitmap newPic = Helper.overlay(pic, filter,photofilter.getMatrix());
 
-                    try{
-                        File newfile = Helper.BitmaptoFile(newPic,file);
-                    }
-                    catch (IOException e){
-                        Toast.makeText(MainActivity.this,"Couldn#t put filter on Pic.",Toast.LENGTH_LONG).show();
-                    }
-                    imageCaptureCallback.onImageCaptured(file);
+                                                    SavedImage toSave = new SavedImage(MainActivity.this);
+                                                    toSave.init(pic,photofilter);
+                                                    Bitmap savebitmap = Helper.loadBitmapFromView(toSave);
+                                                    */
+
+                                                            Helper.createPic(MainActivity.this, pic, faceOverlay.getFilter(), rect, file);
+                                                            imageCaptureCallback.onImageCaptured(file);
+
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                    )
+                                    .addOnFailureListener(
+                                            new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    System.out.println(e.getCause());
+                                                }
+                                            });
+
+
+                        }
+                    }).start();
+                    Toast.makeText(MainActivity.this, "Img captured", Toast.LENGTH_SHORT).show();
                 }
 
                 @Override
                 public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
-                    Toast.makeText(MainActivity.this,
-                            message,
+                    Toast.makeText(MainActivity.this, "couldn take picture",
                             Toast.LENGTH_LONG).show();
                 }
             });
@@ -352,15 +378,15 @@ public class MainActivity extends Activity implements LifecycleOwner {
                                             faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
                                             faceOverlay.rePosistion();
                                             faceOverlay.image.invalidate();
+                                            //System.out.println(faceOverlay.image.getWidth());
                                             if(!overlayShown){
                                                 faceOverlay.setVisibility(View.VISIBLE);
                                                 overlayShown= true;
                                             }
+                                            //System.out.println(overlayframe.getLayoutParams().width);
 
                                             int[] loc =new int[2];
                                             faceOverlay.image.getLocationOnScreen(loc);
-
-                                            System.out.println(loc[0]);
 
                                         }
                                     }
@@ -432,7 +458,76 @@ public class MainActivity extends Activity implements LifecycleOwner {
         return lifecycleRegistry;
     }
 
-    interface ImageCaptureCallback {
+    public interface ImageCaptureCallback {
         void onImageCaptured(File image);
     }
+
+    /*private class SaveImage extends AsyncTask<File,Void,File>{
+        protected File doInBackground(File... files) {
+            Toast.makeText(MainActivity.this,"Img captured",Toast.LENGTH_SHORT).show();
+            try{
+                Bitmap bits= Helper.rotateandflipBitmap(files[0],90);
+            }
+            catch (IOException e){
+                Toast.makeText(MainActivity.this,"Couldnt rotate Picture",Toast.LENGTH_SHORT).show();
+            }
+
+            FirebaseVisionFaceDetector imagedetect = createDetector();
+
+            Bitmap pic= BitmapFactory.decodeFile(files[0].getAbsolutePath());
+            FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
+
+            imagedetect.detectInImage(image)
+                    .addOnSuccessListener(
+                            new OnSuccessListener<List<FirebaseVisionFace>>() {
+                                @Override
+                                public void onSuccess(List<FirebaseVisionFace> firebaseVisionFaces) {
+                                    if(firebaseVisionFaces!= null&&firebaseVisionFaces.size()!=0) {
+                                        for (FirebaseVisionFace face : firebaseVisionFaces) {
+
+                                            Rect rect = face.getBoundingBox();
+                                            System.out.println("Rect:"+ rect.width()+" " + rect.height());
+                                            int scalingfact =1;
+                                            rect.set(rect.left * scalingfact, rect.top *scalingfact, rect.right *scalingfact, rect.bottom * scalingfact);
+                                                    /*FaceOverlay photofilter = new FaceOverlay(MainActivity.this);
+                                                    photofilter.setFace(face);
+
+
+                                                    photofilter.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
+                                                    photofilter.setScreen(new FrameLayout.LayoutParams(pic.getWidth(),pic.getHeight()));
+                                                    photofilter.rePosistion();
+                                                    System.out.println(photofilter.screen.width+ " "+photofilter.image.getWidth()+ " "+ pic.getWidth());
+                                                    Bitmap filter = Helper.loadBitmapFromView(photofilter);
+
+                                                    Bitmap newPic = Helper.overlay(pic, filter,photofilter.getMatrix());
+
+                                                    SavedImage toSave = new SavedImage(MainActivity.this);
+                                                    toSave.init(pic,photofilter);
+                                                    Bitmap savebitmap = Helper.loadBitmapFromView(toSave);
+
+                                            Helper.createPic(MainActivity.this,pic,faceOverlay.getFilter(),rect,files[0]);
+
+                                        }
+                                    }
+                                }
+                            }
+                    )
+                    .addOnFailureListener(
+                            new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    System.out.println(e.getCause());
+                                }
+                            });
+
+        }
+
+
+        protected void onPostExecute(File result) {
+
+
+        }
+    }
+
+     */
 }
