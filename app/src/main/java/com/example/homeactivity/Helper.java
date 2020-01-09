@@ -7,10 +7,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.Toast;
+
+import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -62,7 +66,7 @@ public class Helper {
         return file;
     }
 
-    public static void createPic(Context context,Bitmap pic,int drawable, Rect rect, File file){
+    public static Bitmap createPic(Context context,Bitmap pic,int drawable, Rect rect, File file){
         Resources resources = context.getResources();
         Bitmap picmap = BitmapFactory.decodeResource(resources,drawable);
         Bitmap.createScaledBitmap(picmap,rect.width(),rect.height(),false);
@@ -75,6 +79,49 @@ public class Helper {
         catch (IOException e){
             Toast.makeText(context,"Couldn#t put filter on Pic.",Toast.LENGTH_LONG).show();
         }
+        return newPic;
+    }
+
+    public void createPic(Context context,FirebaseVisionFace face, Rect rect,Bitmap pic){
+        FaceOverlay photofilter = new FaceOverlay(context);
+        photofilter.setFace(face);
+
+
+        photofilter.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
+        photofilter.setScreen(new FrameLayout.LayoutParams(pic.getWidth(),pic.getHeight()));
+        photofilter.rePosistion();
+        System.out.println(photofilter.screen.width+ " "+photofilter.image.getWidth()+ " "+ pic.getWidth());
+        Bitmap filter = Helper.loadBitmapFromView(photofilter);
+
+        //Bitmap newPic = Helper.overlay(pic, filter,photofilter.getMatrix());
+
+        SavedImage toSave = new SavedImage(context);
+        toSave.init(pic,photofilter);
+        Bitmap savebitmap = Helper.loadBitmapFromView(toSave);
+    }
+
+    public static Bitmap resize(Bitmap bm, int maxWidth, int maxHeight) {
+        int width = bm.getWidth();
+        int height = bm.getHeight();
+
+        if (width > height) {
+            // landscape
+            float ratio = (float) width / maxWidth;
+            width = maxWidth;
+            height = (int) (height / ratio);
+        } else if (height > width) {
+            // portrait
+            float ratio = (float) height / maxHeight;
+            height = maxHeight;
+            width = (int) (width / ratio);
+        } else {
+            // square
+            height = maxHeight;
+            width = maxWidth;
+        }
+
+        bm = Bitmap.createScaledBitmap(bm, width, height, true);
+        return bm;
     }
 
 }

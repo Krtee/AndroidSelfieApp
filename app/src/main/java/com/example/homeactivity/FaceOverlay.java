@@ -31,20 +31,18 @@ public class FaceOverlay extends RelativeLayout {
     ImageView image;
     Rect facerect;
     String path;
-    int scalingfact=10;
+    Filter filter;
     ViewGroup.LayoutParams screen;
 
     public FaceOverlay(Context context){
         super(context);
-        init(context);
     }
 
 
     public FaceOverlay(Context context, AttributeSet attrs){
         super(context,attrs);
-        init(context);
-
     }
+
 
     @Override
     public void setLayoutParams(ViewGroup.LayoutParams params) {
@@ -55,13 +53,13 @@ public class FaceOverlay extends RelativeLayout {
         View v =LayoutInflater.from(context).inflate(R.layout.filter_view,this);
         image = findViewById(R. id.imagefilter);
 
-        image.setImageResource(R.drawable.peachemoji);
+        image.setImageResource(filter.getDrawable());
     }
 
     public void setFace(FirebaseVisionFace face) {
         this.face = face;
         facerect = face.getBoundingBox();
-        facerect.set(facerect.left * scalingfact, facerect.top *scalingfact, facerect.right *scalingfact, facerect.bottom * scalingfact);
+        facerect.set(facerect.left * filter.getScalingfact(), facerect.top *filter.getScalingfact(), facerect.right *filter.getScalingfact(), facerect.bottom * filter.getScalingfact());
     }
 
 
@@ -72,8 +70,12 @@ public class FaceOverlay extends RelativeLayout {
         invalidate();
     }
 
+    public void setFilter(Filter filter){
+        this.filter=filter;
+    }
+
     public int getFilter(){
-        return R.drawable.peachemoji;
+        return filter.getDrawable();
     }
 
 
