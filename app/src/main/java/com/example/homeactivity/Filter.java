@@ -3,6 +3,8 @@ package com.example.homeactivity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -13,7 +15,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Filter {
+public class Filter implements Parcelable {
     private int drawable;
     private int scalingfact;
 
@@ -22,33 +24,6 @@ public class Filter {
         this.scalingfact = scalingfact;
     }
 
-    public static List<Filter> getAllFilters(Context context){
-        List<Filter> filters = new ArrayList<>();
-        try {
-            Resources res = context.getResources();
-            InputStreamReader in_s = new InputStreamReader(res.openRawResource(R.raw.pics));
-
-            BufferedReader reader= new BufferedReader(in_s);
-            String line;
-            String[] infos;
-
-            while((line=reader.readLine())!=null &&line.length()!=0){
-                infos=line.split(",");
-                int resID =context.getResources().getIdentifier(infos[0],"drawable",context.getPackageName());
-                try{
-                    filters.add(new Filter(resID,Integer.getInteger(infos[1])));
-                }
-                catch (NullPointerException e){
-                    e.printStackTrace();
-                }
-            }
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return filters;
-    }
 
     public int getDrawable() {
         return drawable;
@@ -56,6 +31,39 @@ public class Filter {
 
     public int getScalingfact() {
         return scalingfact;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    // write your object's data to the passed-in Parcel
+    @Override
+    public void writeToParcel(Parcel out, int flags) {
+        out.writeInt(drawable);
+        out.writeInt(scalingfact);
+    }
+
+    // this is used to regenerate your object. All Parcelables must have a CREATOR that implements these two methods
+    public static final Parcelable.Creator<Filter> CREATOR = new Parcelable.Creator<Filter>() {
+        public Filter createFromParcel(Parcel in) {
+            return new Filter(in);
+        }
+
+        public Filter[] newArray(int size) {
+            return new Filter[size];
+        }
+    };
+
+    // example constructor that takes a Parcel and gives you an object populated with it's values
+    private Filter(Parcel in) {
+        readFromParcel(in);
+    }
+
+    private void readFromParcel(Parcel in) {
+        drawable = in.readInt();
+        scalingfact = in.readInt();
     }
 
 }

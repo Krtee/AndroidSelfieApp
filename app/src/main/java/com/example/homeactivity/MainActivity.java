@@ -19,6 +19,7 @@ import androidx.lifecycle.LifecycleRegistry;
 import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
@@ -57,6 +58,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     FirebaseVisionFaceDetector detector;
     ImageButton gallery;
     ProgressBar progressBar;
+    Filter filter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +66,9 @@ public class MainActivity extends Activity implements LifecycleOwner {
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         setContentView(R.layout.activity_main);
+
+        Intent intent = getIntent();
+        filter =intent.getParcelableExtra("filtermask");
 
         lifecycleRegistry = new LifecycleRegistry(this);
         lifecycleRegistry.setCurrentState(Lifecycle.State.CREATED);
@@ -76,7 +81,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         faceOverlay= findViewById(R.id.filter);
         faceOverlay.setVisibility(View.GONE);
-        faceOverlay.setFilter(new Filter(R.drawable.filter_peachemoji,10));
+        faceOverlay.setFilter(filter);
         faceOverlay.init(MainActivity.this);
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -108,13 +113,22 @@ public class MainActivity extends Activity implements LifecycleOwner {
                 captureImage(image -> runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Bitmap scaled = Bitmap.createScaledBitmap(image,gallery.getWidth(),gallery.getHeight(),false);
-                                gallery.setImageBitmap(scaled);
+                                gallery.setImageBitmap(image);
                                 progressBar.setVisibility(View.GONE);
                                 Toast.makeText(MainActivity.this,"Worked.",Toast.LENGTH_LONG).show();
                             }
                         })
                 );
+            }
+        });
+
+        ImageButton back = findViewById(R.id.BackButton);
+
+        back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onStop();
+                finish();
             }
         });
     }

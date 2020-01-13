@@ -16,10 +16,14 @@ import android.widget.Toast;
 
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Helper {
 
@@ -122,6 +126,33 @@ public class Helper {
 
         bm = Bitmap.createScaledBitmap(bm, width, height, true);
         return bm;
+    }
+    public static List<Filter> getAllFilters(Context context){
+        List<Filter> filters = new ArrayList<>();
+        try {
+            Resources res = context.getResources();
+            InputStreamReader in_s = new InputStreamReader(res.openRawResource(R.raw.pics));
+
+            BufferedReader reader= new BufferedReader(in_s);
+            String line;
+            String[] infos;
+
+            while((line=reader.readLine())!=null &&line.length()!=0){
+                infos=line.split(",");
+                int resID =context.getResources().getIdentifier(infos[0],"drawable",context.getPackageName());
+                try{
+                    filters.add(new Filter(resID,Integer.parseInt(infos[1])));
+                }
+                catch (NullPointerException e){
+                    e.printStackTrace();
+                }
+            }
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return filters;
     }
 
 }

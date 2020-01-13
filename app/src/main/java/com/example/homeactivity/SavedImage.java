@@ -27,7 +27,6 @@ public class SavedImage extends RelativeLayout {
     public void init(Bitmap pic, FaceOverlay filter){
         View v = LayoutInflater.from(context).inflate(R.layout.savedimage_view,this);
         photo = findViewById(R. id.imageView4);
-        this.filter = findViewById(R.id.facefilter);
         this.filter= filter;
         photo.setImageBitmap(pic);
         invalidate();

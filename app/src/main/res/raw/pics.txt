@@ -1,1 +1,6 @@
-filter_peachemoji.png,10
+mask_peachemoji,10
+mask_african,15
+mask_chinese,15
+mask_japanese,15
+mask_mexican,15
+mask_venetian,15
