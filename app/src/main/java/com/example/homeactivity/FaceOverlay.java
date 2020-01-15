@@ -30,6 +30,7 @@ public class FaceOverlay extends RelativeLayout {
     FirebaseVisionFace face;
     ImageView image;
     Rect facerect;
+    Rect rect;
     String path;
     Filter filter;
     ViewGroup.LayoutParams screen;
@@ -59,14 +60,14 @@ public class FaceOverlay extends RelativeLayout {
     public void setFace(FirebaseVisionFace face) {
         this.face = face;
         facerect = face.getBoundingBox();
-        facerect.set(facerect.left * filter.getScalingfact(), facerect.top *filter.getScalingfact(), facerect.right *filter.getScalingfact(), facerect.bottom * filter.getScalingfact());
+        rect = new Rect(facerect.left * filter.getScalingfact(),facerect.top * filter.getScalingfact(),facerect.right * filter.getScalingfact(),facerect.bottom * filter.getScalingfact());
     }
 
 
 
     public void rePosistion(){
-        this.setX(screen.width-facerect.centerX()-Math.round(facerect.width()/2));
-        this.setY(facerect.centerY());
+        this.setX(screen.width-facerect.centerX()+this.getWidth()/2);
+        this.setY(facerect.centerY()+this.getHeight()/2);
         invalidate();
     }
 
@@ -74,13 +75,13 @@ public class FaceOverlay extends RelativeLayout {
         this.filter=filter;
     }
 
-    public int getFilter(){
-        return filter.getDrawable();
+    public Filter getFilter(){
+        return filter;
     }
 
 
-    public Rect getFacerect() {
-        return facerect;
+    public Rect getRect() {
+        return rect;
     }
 
 

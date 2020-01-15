@@ -5,5 +5,5 @@ import android.graphics.Bitmap;
 import java.io.File;
 
 public interface ImageCaptureCallback {
-    void onImageCaptured(Bitmap image);
+    void onImageCaptured(File image, Bitmap bitmap);
 }

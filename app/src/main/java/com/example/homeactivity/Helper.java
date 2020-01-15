@@ -9,8 +9,11 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Environment;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -61,7 +64,7 @@ public class Helper {
 
     public static File BitmaptoFile(Bitmap map, File file) throws IOException{
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        map.compress(Bitmap.CompressFormat.PNG, 0 /*ignored for PNG*/, bos);
+        map.compress(Bitmap.CompressFormat.JPEG, 90 /*ignored for PNG*/, bos);
         byte[] bitmapdata = bos.toByteArray();
         FileOutputStream fos = new FileOutputStream(file);
         fos.write(bitmapdata);
@@ -153,6 +156,22 @@ public class Helper {
             e.printStackTrace();
         }
         return filters;
+    }
+
+    static void notifyNewFileToSystem(Context context,File file) {
+        String type = null;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(file.getAbsolutePath());
+        if (extension != null) {
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+
+        MediaScannerConnection.scanFile(context,
+                new String[]{file.getAbsolutePath()},
+                new String[]{type},
+                (path, uri) -> {
+                    System.out.println(path+" "+ uri);
+                }
+        );
     }
 
 }

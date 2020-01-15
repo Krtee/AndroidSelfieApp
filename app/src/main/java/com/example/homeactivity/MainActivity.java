@@ -22,9 +22,14 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.media.Image;
+import android.media.ThumbnailUtils;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.view.TextureView;
 import android.view.View;
@@ -42,6 +47,7 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 
 import java.io.File;
+import java.io.IOException;
 
 public class MainActivity extends Activity implements LifecycleOwner {
     private CameraManager cameraManager;
@@ -59,6 +65,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     ImageButton gallery;
     ProgressBar progressBar;
     Filter filter;
+    File file;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,10 +117,10 @@ public class MainActivity extends Activity implements LifecycleOwner {
         createImg.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                captureImage(image -> runOnUiThread(new Runnable() {
+                captureImage((image,bitmap) -> runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                gallery.setImageBitmap(image);
+                                gallery.setImageBitmap(bitmap);
                                 progressBar.setVisibility(View.GONE);
                                 Toast.makeText(MainActivity.this,"Worked.",Toast.LENGTH_LONG).show();
                             }
@@ -166,18 +173,21 @@ public class MainActivity extends Activity implements LifecycleOwner {
     void captureImage(final ImageCaptureCallback imageCaptureCallback) {
         if (imageCapture != null) {
 
-            ContextWrapper cw = new ContextWrapper(getApplicationContext());
+            File[] root = ContextCompat.getExternalFilesDirs(this,"images");
+            File myDir = root[0];
+            if (!myDir.exists()) {
+                myDir.mkdirs();
+            }
 
-            File path = cw.getDir("imageDir", Context.MODE_PRIVATE);
-            File file = new File(path, System.currentTimeMillis()+".png");
+            file = new File(myDir, System.currentTimeMillis()+".jpg");
 
             imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
                 @Override
                 public void onImageSaved(@NonNull File file) {
                     faceOverlay.setVisibility(View.GONE);
-                    Thread savingPic = new ImageSaver(MainActivity.this,file,faceOverlay.getFilter(),imageCaptureCallback,gallery);
+                    Thread savingPic = new ImageSaver(MainActivity.this,file,faceOverlay.getFilter().getDrawable(),imageCaptureCallback,gallery);
                     savingPic.start();
-                    Toast.makeText(MainActivity.this, "Img captured", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Img captured: "+file.getAbsolutePath(), Toast.LENGTH_LONG).show();
                     progressBar.setVisibility(View.VISIBLE);
                 }
 
@@ -217,10 +227,10 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
                                             faceOverlay.setFace(face);
                                             Rect rect = face.getBoundingBox();
-                                            faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
+                                            faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width()*faceOverlay.getFilter().getScalingfact(),rect.height()*faceOverlay.getFilter().getScalingfact()));
                                             faceOverlay.rePosistion();
                                             faceOverlay.image.invalidate();
-                                            //System.out.println(faceOverlay.image.getWidth());
+                                            System.out.println(faceOverlay.getX());
                                             if(!overlayShown){
                                                 faceOverlay.setVisibility(View.VISIBLE);
                                                 overlayShown= true;
