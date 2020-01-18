@@ -22,17 +22,19 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 
 public class CameraManager {
-    int DSI_height,DSI_width;
+    private int DSI_height,DSI_width;
 
-    public CameraManager(int DSI_height,int DSI_width){
+    CameraManager(int DSI_height,int DSI_width){
         this.DSI_height=DSI_height;
         this.DSI_width= DSI_width;
     }
 
-    public Preview createPreview() {
+    Preview createPreview() {
+        Rational rational=new Rational(DSI_width,DSI_height);
 
         PreviewConfig.Builder previewConfigBuilder = new PreviewConfig.Builder();
         previewConfigBuilder
+                .setTargetAspectRatio(rational)
                 .setTargetRotation(Surface.ROTATION_0)
                 .setLensFacing(CameraX.LensFacing.FRONT);
 
@@ -40,10 +42,11 @@ public class CameraManager {
         //picframe.setLayoutParams(textureView.getLayoutParams());
 
         Preview preview = new Preview(previewConfig);
+
         return preview;
     }
-
-    public FrameLayout.LayoutParams setAspectRatioTextureView(int ResolutionWidth , int ResolutionHeight )
+/*
+    FrameLayout.LayoutParams setAspectRatioTextureView(int ResolutionWidth , int ResolutionHeight )
     {
         if(ResolutionWidth > ResolutionHeight){
             int newWidth = DSI_width;
@@ -52,13 +55,15 @@ public class CameraManager {
 
         }else {
             int newWidth = DSI_width;
-            int newHeight = ((DSI_width * ResolutionHeight)/ResolutionWidth);
+            int newHeight = DSI_height;  //((DSI_width * ResolutionHeight)/ResolutionWidth);
             return new FrameLayout.LayoutParams(newWidth,newHeight);
         }
 
     }
 
-    public ImageCapture createImageCapture() {
+ */
+
+    static ImageCapture createImageCapture() {
         ImageCaptureConfig.Builder imageCaptureConfig = new ImageCaptureConfig.Builder();
         imageCaptureConfig.setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY);
         imageCaptureConfig.setLensFacing(CameraX.LensFacing.FRONT);
@@ -69,7 +74,7 @@ public class CameraManager {
     }
 
 
-    public static FirebaseVisionFaceDetector createDetector(){
+    static FirebaseVisionFaceDetector createDetector(){
         FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions.Builder()
                 .setPerformanceMode(FirebaseVisionFaceDetectorOptions.FAST)
                 .setLandmarkMode(FirebaseVisionFaceDetectorOptions.NO_LANDMARKS)
@@ -81,7 +86,7 @@ public class CameraManager {
 
     }
 
-    public static ImageAnalysis createAnalyser(){
+    static ImageAnalysis createAnalyser(){
         HandlerThread analyzerThread = new HandlerThread("FaceDetectionAnalyzer");
         analyzerThread.start();
 
@@ -90,7 +95,7 @@ public class CameraManager {
                 .setCallbackHandler(new Handler(analyzerThread.getLooper()));
 
         // To have a pretty quick analysis a resolution is enough.
-        Size analyzeResolution = new Size(70, 130);
+        Size analyzeResolution = new Size(90, 120);
         analyzerConfig.setTargetResolution(analyzeResolution);
         analyzerConfig.setTargetAspectRatio(new Rational(analyzeResolution.getWidth(), analyzeResolution.getHeight()));
         analyzerConfig.setLensFacing(CameraX.LensFacing.FRONT);

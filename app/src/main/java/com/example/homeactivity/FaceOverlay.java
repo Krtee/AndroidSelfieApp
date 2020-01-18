@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.text.Layout;
 import android.util.AttributeSet;
+import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,13 +28,12 @@ import java.io.IOException;
 import java.net.URL;
 
 public class FaceOverlay extends RelativeLayout {
-    FirebaseVisionFace face;
-    ImageView image;
-    Rect facerect;
-    Rect rect;
-    String path;
-    Filter filter;
-    ViewGroup.LayoutParams screen;
+    private FirebaseVisionFace face;
+    private ImageView image;
+    private Rect facerect;
+    private Filter filter;
+    private ViewGroup.LayoutParams screen;
+    private double scaleX,scaleY,scaleXY;
 
     public FaceOverlay(Context context){
         super(context);
@@ -57,39 +57,52 @@ public class FaceOverlay extends RelativeLayout {
         image.setImageResource(filter.getDrawable());
     }
 
-    public void setFace(FirebaseVisionFace face) {
+    void setFace(FirebaseVisionFace face) {
         this.face = face;
         facerect = face.getBoundingBox();
-        rect = new Rect(facerect.left * filter.getScalingfact(),facerect.top * filter.getScalingfact(),facerect.right * filter.getScalingfact(),facerect.bottom * filter.getScalingfact());
     }
 
 
 
-    public void rePosistion(){
-        this.setX(screen.width-facerect.centerX()+this.getWidth()/2);
-        this.setY(facerect.centerY()+this.getHeight()/2);
+    void rePosistion(){
+        this.setX((float)(screen.width-(screen.width*scaleX)-(float)this.getWidth()/(float)2.5));
+        this.setY((float)(screen.height*scaleY-(float) this.getHeight()/(float)1.3)) ;
         invalidate();
     }
 
-    public void setFilter(Filter filter){
+    void setScale(double x, double y){
+        scaleX= x;
+        scaleY=y;
+        scaleXY=(double)screen.width/screen.height;
+    }
+
+    double[] getScaledCentre(){
+        double[] coords = new double[4];
+        coords[0]= this.getX()/screen.width;
+        coords[1]=this.getY()/screen.height;
+        coords[2]=(this.getX()+this.getWidth())/screen.width;
+        coords[3]=(this.getY()+this.getHeight())/screen.height;
+        return coords;
+    }
+
+    void setFilter(Filter filter){
         this.filter=filter;
     }
 
-    public Filter getFilter(){
+    void setScreen(ViewGroup.LayoutParams screen) {
+        this.screen = screen;
+    }
+
+    Filter getFilter(){
         return filter;
     }
 
-
-    public Rect getRect() {
-        return rect;
+    double getScaleXY() {
+        return scaleXY;
     }
 
-
-    public String getPath() {
-        return path;
+    ImageView getImage(){
+        return image;
     }
 
-    public void setScreen(ViewGroup.LayoutParams screen) {
-        this.screen = screen;
-    }
 }

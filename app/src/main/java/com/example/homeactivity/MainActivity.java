@@ -17,18 +17,13 @@ import androidx.lifecycle.LifecycleRegistry;
 
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.media.Image;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.view.TextureView;
@@ -66,6 +61,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
     ProgressBar progressBar;
     Filter filter;
     File file;
+    Uri fileUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,10 +113,11 @@ public class MainActivity extends Activity implements LifecycleOwner {
         createImg.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                captureImage((image,bitmap) -> runOnUiThread(new Runnable() {
+                captureImage((image,bitmap,fileUri) -> runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 gallery.setImageBitmap(bitmap);
+                                setFileUri(fileUri);
                                 progressBar.setVisibility(View.GONE);
                                 Toast.makeText(MainActivity.this,"Worked.",Toast.LENGTH_LONG).show();
                             }
@@ -138,6 +135,19 @@ public class MainActivity extends Activity implements LifecycleOwner {
                 finish();
             }
         });
+
+        gallery.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(fileUri!=null) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, fileUri);
+                    startActivity(intent);
+                }
+                else {
+                    Toast.makeText(MainActivity.this,"No picture taken yet.",Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void startCamera() {
@@ -145,12 +155,12 @@ public class MainActivity extends Activity implements LifecycleOwner {
         CameraX.unbindAll();
 
         detector = CameraManager.createDetector();
-        textureView.setLayoutParams(cameraManager.setAspectRatioTextureView(720,1280));
+        textureView.setLayoutParams(new FrameLayout.LayoutParams(DSI_width,DSI_height));
         preview =cameraManager.createPreview();
         setPreviewlistener();
         faceOverlay.setScreen(textureView.getLayoutParams());
         imageAnalysis=setAnalyzerTask();
-        imageCapture =cameraManager.createImageCapture();
+        imageCapture =CameraManager.createImageCapture();
 
         CameraX.bindToLifecycle(this, imageAnalysis, preview, imageCapture);
     }
@@ -181,13 +191,17 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
             file = new File(myDir, System.currentTimeMillis()+".jpg");
 
+            FaceOverlay picOverlay = faceOverlay;
+
+
             imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
                 @Override
                 public void onImageSaved(@NonNull File file) {
                     faceOverlay.setVisibility(View.GONE);
-                    Thread savingPic = new ImageSaver(MainActivity.this,file,faceOverlay.getFilter().getDrawable(),imageCaptureCallback,gallery);
+                    Thread savingPic = new ImageSaver(MainActivity.this,file,picOverlay,imageCaptureCallback,gallery);
                     savingPic.start();
-                    Toast.makeText(MainActivity.this, "Img captured: "+file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+                    System.out.println("pic taken"+picOverlay.getWidth());
+                    Toast.makeText(MainActivity.this, "Img captured", Toast.LENGTH_LONG).show();
                     progressBar.setVisibility(View.VISIBLE);
                 }
 
@@ -227,17 +241,22 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
                                             faceOverlay.setFace(face);
                                             Rect rect = face.getBoundingBox();
-                                            faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rect.width()*faceOverlay.getFilter().getScalingfact(),rect.height()*faceOverlay.getFilter().getScalingfact()));
+                                            double x = (double) rect.centerX()/90;
+                                            double y = (double) rect.centerY()/120;
+                                            faceOverlay.setScale(x,y);
+                                            int rectWidth= (int)Math.round((double) rect.width()/90*faceOverlay.getFilter().getScalingfact());
+                                            int rectHeight=(int)Math.round((double) rect.height()/120*faceOverlay.getFilter().getScalingfact());
                                             faceOverlay.rePosistion();
-                                            faceOverlay.image.invalidate();
-                                            System.out.println(faceOverlay.getX());
+                                            faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rectWidth,rectHeight));
+                                            faceOverlay.getImage().invalidate();
+                                            //System.out.println(faceOverlay.getX()+ "! "+ faceOverlay.getWidth());
                                             if(!overlayShown){
                                                 faceOverlay.setVisibility(View.VISIBLE);
                                                 overlayShown= true;
                                             }
                                             //System.out.println(overlayframe.getLayoutParams().width);
                                             int[] loc =new int[2];
-                                            faceOverlay.image.getLocationOnScreen(loc);
+                                            faceOverlay.getImage().getLocationOnScreen(loc);
 
                                         }
                                     }
@@ -259,6 +278,9 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
 
         return imageAnalysis;
+    }
+    private void setFileUri(Uri uri){
+        this.fileUri=uri;
     }
 
     @Override
@@ -313,73 +335,4 @@ public class MainActivity extends Activity implements LifecycleOwner {
         return lifecycleRegistry;
     }
 
-
-    /*private class SaveImage extends AsyncTask<File,Void,File>{
-        protected File doInBackground(File... files) {
-            Toast.makeText(MainActivity.this,"Img captured",Toast.LENGTH_SHORT).show();
-            try{
-                Bitmap bits= Helper.rotateandflipBitmap(files[0],90);
-            }
-            catch (IOException e){
-                Toast.makeText(MainActivity.this,"Couldnt rotate Picture",Toast.LENGTH_SHORT).show();
-            }
-
-            FirebaseVisionFaceDetector imagedetect = createDetector();
-
-            Bitmap pic= BitmapFactory.decodeFile(files[0].getAbsolutePath());
-            FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
-
-            imagedetect.detectInImage(image)
-                    .addOnSuccessListener(
-                            new OnSuccessListener<List<FirebaseVisionFace>>() {
-                                @Override
-                                public void onSuccess(List<FirebaseVisionFace> firebaseVisionFaces) {
-                                    if(firebaseVisionFaces!= null&&firebaseVisionFaces.size()!=0) {
-                                        for (FirebaseVisionFace face : firebaseVisionFaces) {
-
-                                            Rect rect = face.getBoundingBox();
-                                            System.out.println("Rect:"+ rect.width()+" " + rect.height());
-                                            int scalingfact =1;
-                                            rect.set(rect.left * scalingfact, rect.top *scalingfact, rect.right *scalingfact, rect.bottom * scalingfact);
-                                                    /*FaceOverlay photofilter = new FaceOverlay(MainActivity.this);
-                                                    photofilter.setFace(face);
-
-
-                                                    photofilter.setLayoutParams(new FrameLayout.LayoutParams(rect.width(),rect.height()));
-                                                    photofilter.setScreen(new FrameLayout.LayoutParams(pic.getWidth(),pic.getHeight()));
-                                                    photofilter.rePosistion();
-                                                    System.out.println(photofilter.screen.width+ " "+photofilter.image.getWidth()+ " "+ pic.getWidth());
-                                                    Bitmap filter = Helper.loadBitmapFromView(photofilter);
-
-                                                    Bitmap newPic = Helper.overlay(pic, filter,photofilter.getMatrix());
-
-                                                    SavedImage toSave = new SavedImage(MainActivity.this);
-                                                    toSave.init(pic,photofilter);
-                                                    Bitmap savebitmap = Helper.loadBitmapFromView(toSave);
-
-                                            Helper.createPic(MainActivity.this,pic,faceOverlay.getFilter(),rect,files[0]);
-
-                                        }
-                                    }
-                                }
-                            }
-                    )
-                    .addOnFailureListener(
-                            new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    System.out.println(e.getCause());
-                                }
-                            });
-
-        }
-
-
-        protected void onPostExecute(File result) {
-
-
-        }
-    }
-
-     */
 }

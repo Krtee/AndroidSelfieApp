@@ -1,18 +1,10 @@
 package com.example.homeactivity;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Rect;
-import android.media.MediaScannerConnection;
 import android.media.ThumbnailUtils;
-import android.net.Uri;
-import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
 import android.view.View;
-import android.webkit.MimeTypeMap;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
@@ -23,24 +15,22 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 
 import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
 public class ImageSaver extends Thread{
-    File file;
-    Context context;
-    int drawable;
-    ImageCaptureCallback imageCaptureCallback;
-    View view;
+    private File file;
+    private Context context;
+    private FaceOverlay filter;
+    private ImageCaptureCallback imageCaptureCallback;
+    private View thumbnailView;
 
-    public ImageSaver(Context context,File file,int drawable,ImageCaptureCallback imageCaptureCallback, View view){
+    ImageSaver(Context context,File file,FaceOverlay filter,ImageCaptureCallback imageCaptureCallback, View thumbnailView){
         this.context=context;
         this.file=file;
-        this.drawable=drawable;
+        this.filter= filter;
         this.imageCaptureCallback =imageCaptureCallback;
-        this.view = view;
+        this.thumbnailView = thumbnailView;
     }
 
     @Override
@@ -49,10 +39,38 @@ public class ImageSaver extends Thread{
         try {
             pic = Helper.rotateandflipBitmap(file, 90);
             //Bitmap pic = BitmapFactory.decodeFile(file.getAbsolutePath());
+
+            /*
             FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
 
             FirebaseVisionFaceDetector detectImage = CameraManager.createDetector();
+            */
 
+            double[] filterXY= filter.getScaledCentre();
+            int width=(int)(pic.getHeight()*filter.getScaleXY());
+            int leftframe= (pic.getWidth()/2)-(width/2);
+            int rightframe = (pic.getWidth()/2)+(width/2);
+
+            Rect frame = new Rect(leftframe,0,rightframe,pic.getHeight());
+
+            int left= (int)(filterXY[0]*frame.width());
+            int top= (int)(filterXY[1]*pic.getHeight());
+            int right= (int)( filterXY[2]*frame.width());
+            int bottom= (int)(filterXY[3]*pic.getHeight());
+
+
+            Rect rect = new Rect(left,top,right,bottom);
+
+            Helper helper=new Helper();
+
+            Bitmap newPic = helper.createPic(context, pic, filter,frame,rect , file);
+            final int THUMBSIZE = 500;
+            Bitmap thumb= ThumbnailUtils.extractThumbnail(newPic,
+                    thumbnailView.getWidth()-20, thumbnailView.getHeight()-20);
+
+            imageCaptureCallback.onImageCaptured(file,thumb,helper.getFileURL());
+
+            /*
             detectImage.detectInImage(image)
                     .addOnSuccessListener(
                             new OnSuccessListener<List<FirebaseVisionFace>>() {
@@ -62,15 +80,20 @@ public class ImageSaver extends Thread{
                                         for (FirebaseVisionFace face : firebaseVisionFaces) {
 
                                             Rect rect = face.getBoundingBox();
-                                            System.out.println("Rect:" + rect.width() + " " + rect.height());
-                                            int scalingfact = 1;
-                                            rect.set(rect.left * scalingfact, rect.top * scalingfact, rect.right * scalingfact, rect.bottom * scalingfact);
-                                            Bitmap newPic = Helper.createPic(context, pic, drawable, rect, file);
+                                            System.out.println("Rect:" + rect.width() + " " + rect.height()+" "+pic.getWidth()+" "+pic.getHeight());
+                                            int scalingfact = filter.getFilter().getScalingfact();
+                                            float scaleX=(float)rect.width()/pic.getWidth();
+                                            float scaleY=(float)rect.height()/pic.getHeight();
+                                            int width= Math.round(scaleX*scalingfact);
+                                            int height= Math.round(scaleY*scalingfact);
+                                            System.out.println("width:"+width+ " "+ "height:"+height+" "+ scaleX+" "+scaleY);
+                                            rect.set(rect.centerX()-width/2,rect.centerX()-height/2,rect.centerX()+width/2,rect.centerY()+height/2);
+                                            Bitmap newPic = Helper.createPic(context, pic, filter.getFilter().getDrawable(), rect, file);
                                             final int THUMBSIZE = 500;
                                             Bitmap thumb= ThumbnailUtils.extractThumbnail(newPic,
-                                                    view.getWidth()-1, view.getHeight()-1);
+                                                    thumbnailView.getWidth()-10, thumbnailView.getHeight()-10);
                                             Helper.notifyNewFileToSystem(context,file);
-                                            //Bitmap scaled = Helper.resize(newPic,view.getWidth(),view.getHeight());
+                                            //Bitmap scaled = Helper.resize(newPic,thumbnailView.getWidth(),thumbnailView.getHeight());
                                             imageCaptureCallback.onImageCaptured(file,thumb);
 
 
@@ -88,6 +111,8 @@ public class ImageSaver extends Thread{
                             }
                     )
             ;
+
+             */
 
 
         }

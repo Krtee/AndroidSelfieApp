@@ -11,9 +11,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.view.View;
-import android.widget.Button;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class SelectFilterActivity extends AppCompatActivity implements FilterAdapter.ItemClickListener {
@@ -49,6 +47,7 @@ public class SelectFilterActivity extends AppCompatActivity implements FilterAda
         Intent intent = new Intent(SelectFilterActivity.this,MainActivity.class);
         intent.putExtra("filtermask",filters.get(position));
         startActivity(intent);
+
     }
 
 }

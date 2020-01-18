@@ -1,6 +1,6 @@
-mask_peachemoji,10
-mask_african,15
-mask_chinese,15
-mask_japanese,15
-mask_mexican,15
-mask_venetian,15
+mask_peachemoji,1500
+mask_african,3000
+mask_chinese,3000
+mask_japanese,3000
+mask_mexican,3000
+mask_venetian,3000

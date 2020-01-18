@@ -14,9 +14,9 @@ public class FilterAdapter extends RecyclerView.Adapter<FilterAdapter.MyViewHold
     private ItemClickListener mClickListener;
 
 
-    public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
-        public ImageView imageView;
-        public MyViewHolder(View v){
+    class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
+        ImageView imageView;
+        MyViewHolder(View v){
             super(v);
             imageView=v.findViewById(R.id.imageView4);
             v.setOnClickListener(this);
@@ -28,14 +28,14 @@ public class FilterAdapter extends RecyclerView.Adapter<FilterAdapter.MyViewHold
         }
     }
 
-    public FilterAdapter(List<Filter> myDataset) {
+    FilterAdapter(List<Filter> myDataset) {
         filters = myDataset;
     }
 
     @Override
     public FilterAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent,
                                                          int viewType) {
-        // create a new view
+        // create a new thumbnailView
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.savedimage_view, parent, false);
 
@@ -56,7 +56,6 @@ public class FilterAdapter extends RecyclerView.Adapter<FilterAdapter.MyViewHold
         this.mClickListener = itemClickListener;
     }
 
-    // parent activity will implement this method to respond to click events
     public interface ItemClickListener {
         void onItemClick(View view, int position);
     }
