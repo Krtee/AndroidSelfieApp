@@ -1,31 +1,16 @@
 package com.example.homeactivity;
 
 import android.content.Context;
-import android.content.ContextWrapper;
-import android.content.res.TypedArray;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Rect;
-import android.graphics.drawable.Drawable;
-import android.net.Uri;
-import android.text.Layout;
 import android.util.AttributeSet;
-import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
-import com.google.android.gms.vision.face.Face;
+import com.bumptech.glide.Glide;
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
 
 public class FaceOverlay extends RelativeLayout {
     private FirebaseVisionFace face;
@@ -54,7 +39,9 @@ public class FaceOverlay extends RelativeLayout {
         View v =LayoutInflater.from(context).inflate(R.layout.filter_view,this);
         image = findViewById(R. id.imagefilter);
 
-        image.setImageResource(filter.getDrawable());
+        Glide.with(this.getContext())
+                .load(filter.getPic())
+                .into(image);
     }
 
     void setFace(FirebaseVisionFace face) {

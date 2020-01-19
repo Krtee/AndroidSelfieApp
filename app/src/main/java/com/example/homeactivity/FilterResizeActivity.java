@@ -1,13 +1,12 @@
 package com.example.homeactivity;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
@@ -15,8 +14,8 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 
-
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
@@ -28,9 +27,8 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
@@ -39,51 +37,52 @@ import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 
-public class MainActivity extends Activity implements LifecycleOwner {
+public class FilterResizeActivity extends AppCompatActivity {
     private CameraManager cameraManager;
-    private LifecycleRegistry lifecycleRegistry;
     private int REQUEST_CODE_PERMISSIONS = 101;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE"};
     TextureView textureView;
-    private ImageCapture imageCapture;
     private Preview preview;
     int DSI_height,DSI_width;
     ImageAnalysis imageAnalysis;
     FaceOverlay faceOverlay;
     boolean overlayShown = false;
     FirebaseVisionFaceDetector detector;
-    ImageButton gallery;
-    ProgressBar progressBar;
     Filter filter;
-    File file;
     Uri fileUri;
+    String fileName;
+    int scalingfact=2000;
+    FrameLayout photoframe;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        setContentView(R.layout.activity_filter_resize);
 
-        setContentView(R.layout.activity_main);
+        ActionBar actionBar = FilterResizeActivity.this.getSupportActionBar();
+        actionBar.setTitle("Selfie-App");
 
         Intent intent = getIntent();
-        filter =intent.getParcelableExtra("filtermask");
+        fileUri = Uri.parse(intent.getStringExtra("imagepath"));
+        fileName = intent.getStringExtra("imagename");
 
-        lifecycleRegistry = new LifecycleRegistry(this);
-        lifecycleRegistry.setCurrentState(Lifecycle.State.CREATED);
+        filter = new Filter(fileUri,scalingfact);
 
-        textureView = findViewById(R.id.imageView);
-        gallery = findViewById(R.id.gallery);
-        progressBar= findViewById(R.id.progressBar);
-        progressBar.setVisibility(View.GONE);
-        ConstraintLayout progressparent = findViewById(R.id.progressBarpnt);
-
-        faceOverlay= findViewById(R.id.filter);
+        textureView = findViewById(R.id.photoView);
+        photoframe = findViewById(R.id.photoframe);
+        faceOverlay= findViewById(R.id.cutfilter);
         faceOverlay.setVisibility(View.GONE);
         faceOverlay.setFilter(filter);
-        faceOverlay.init(MainActivity.this);
-
+        faceOverlay.init(FilterResizeActivity.this);
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -92,61 +91,59 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         cameraManager= new CameraManager(DSI_height,DSI_width);
 
+        ViewCompat.setZ(faceOverlay,2);
+
+        setButtons();
+
         if(allPermissionsGranted()){
             startCamera(); //start camera if permission has been granted by user
         } else{
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
+    }
 
-        ImageButton createImg = findViewById(R.id.button_capture);
 
-        ConstraintLayout btnparent= findViewById(R.id.bottomBar);
-        btnparent.bringChildToFront(createImg);
-        createImg.invalidate();
-
-        ViewCompat.setZ(faceOverlay,2);
-        ViewCompat.setZ(btnparent,1);
-        ViewCompat.setZ(progressparent,3);
-
-        createImg.setOnClickListener(new View.OnClickListener() {
+    private void setButtons(){
+        Button small = findViewById(R.id.small);
+        small.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                captureImage((image,bitmap,fileUri) -> runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                gallery.setImageBitmap(bitmap);
-                                setFileUri(fileUri);
-                                progressBar.setVisibility(View.GONE);
-                                Toast.makeText(MainActivity.this,"Worked.",Toast.LENGTH_LONG).show();
-                            }
-                        })
-                );
+                scalingfact-=50;
+                filter.setScalingfact(scalingfact);
             }
         });
 
-        ImageButton back = findViewById(R.id.BackButton);
-
-        back.setOnClickListener(new View.OnClickListener() {
+        Button big = findViewById(R.id.big);
+        big.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                onStop();
+                scalingfact+=50;
+                filter.setScalingfact(scalingfact);
+            }
+        });
+
+        Button save = findViewById(R.id.save);
+        save.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File textfiles = FilterResizeActivity.this.getDir("textfiles", Context.MODE_PRIVATE);
+                File txt = new File(textfiles,"filters.txt");
+                try(FileWriter fw = new FileWriter(txt, true);
+                    BufferedWriter bw = new BufferedWriter(fw);
+                    PrintWriter out = new PrintWriter(bw))
+                {
+                    out.println(fileName+","+scalingfact);
+                } catch (IOException e) {
+                    Toast.makeText(FilterResizeActivity.this,"Error occured,try again",Toast.LENGTH_SHORT).show();
+                }
+
+                Intent intent1 = new Intent(FilterResizeActivity.this,SelectFilterActivity.class);
+                startActivity(intent1);
                 finish();
             }
         });
-
-        gallery.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(fileUri!=null) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, fileUri);
-                    startActivity(intent);
-                }
-                else {
-                    Toast.makeText(MainActivity.this,"No picture taken yet.",Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
     }
+
 
     private void startCamera() {
 
@@ -158,9 +155,8 @@ public class MainActivity extends Activity implements LifecycleOwner {
         setPreviewlistener();
         faceOverlay.setScreen(textureView.getLayoutParams());
         imageAnalysis=setAnalyzerTask();
-        imageCapture =CameraManager.createImageCapture();
 
-        CameraX.bindToLifecycle(this, imageAnalysis, preview, imageCapture);
+        CameraX.bindToLifecycle(FilterResizeActivity.this, imageAnalysis, preview);
     }
 
     private void setPreviewlistener(){
@@ -176,46 +172,6 @@ public class MainActivity extends Activity implements LifecycleOwner {
                         textureView.setSurfaceTexture(output.getSurfaceTexture());
                     }
                 });
-    }
-
-    void captureImage(final ImageCaptureCallback imageCaptureCallback) {
-        if (imageCapture != null) {
-
-            File[] root = ContextCompat.getExternalFilesDirs(this,"images");
-            File myDir = root[0];
-            if (!myDir.exists()) {
-                myDir.mkdirs();
-            }
-
-            file = new File(myDir, System.currentTimeMillis()+".jpg");
-
-            FaceOverlay picOverlay = faceOverlay;
-
-
-            imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
-                @Override
-                public void onImageSaved(@NonNull File file) {
-                    faceOverlay.setVisibility(View.GONE);
-                    Thread savingPic = new ImageSaver(MainActivity.this,file,picOverlay,imageCaptureCallback,gallery);
-                    savingPic.start();
-                    System.out.println("pic taken"+picOverlay.getWidth());
-                    Toast.makeText(MainActivity.this, "Img captured", Toast.LENGTH_LONG).show();
-                    progressBar.setVisibility(View.VISIBLE);
-                }
-
-                @Override
-                public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
-                    Toast.makeText(MainActivity.this, "couldn take picture",
-                            Toast.LENGTH_LONG).show();
-                }
-            });
-
-        } else {
-            Toast.makeText(
-                    MainActivity.this,
-                    "You may need to grant the camera permission!",
-                    Toast.LENGTH_LONG).show();
-        }
     }
 
     private ImageAnalysis setAnalyzerTask() {
@@ -247,12 +203,11 @@ public class MainActivity extends Activity implements LifecycleOwner {
                                             faceOverlay.rePosistion();
                                             faceOverlay.setLayoutParams(new FrameLayout.LayoutParams(rectWidth,rectHeight));
                                             faceOverlay.getImage().invalidate();
-                                            //System.out.println(faceOverlay.getX()+ "! "+ faceOverlay.getWidth());
+                                            System.out.println(faceOverlay.getX()+ "! "+ faceOverlay.getWidth());
                                             if(!overlayShown){
                                                 faceOverlay.setVisibility(View.VISIBLE);
                                                 overlayShown= true;
                                             }
-                                            //System.out.println(overlayframe.getLayoutParams().width);
                                             int[] loc =new int[2];
                                             faceOverlay.getImage().getLocationOnScreen(loc);
 
@@ -271,16 +226,8 @@ public class MainActivity extends Activity implements LifecycleOwner {
                                 });
                     }
                 });
-
-
-
-
         return imageAnalysis;
     }
-    private void setFileUri(Uri uri){
-        this.fileUri=uri;
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
@@ -308,29 +255,13 @@ public class MainActivity extends Activity implements LifecycleOwner {
     public void onPause(){
         super.onPause();
         CameraX.unbindAll();
+        finish();
     }
 
     @Override
     public void onStop(){
         super.onStop();
         CameraX.unbindAll();
+        finish();
     }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        lifecycleRegistry.setCurrentState(Lifecycle.State.STARTED);
-        if(allPermissionsGranted()){
-            startCamera(); //start camera if permission has been granted by user
-        } else{
-            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
-        }
-    }
-
-    @NonNull
-    @Override
-    public Lifecycle getLifecycle() {
-        return lifecycleRegistry;
-    }
-
 }

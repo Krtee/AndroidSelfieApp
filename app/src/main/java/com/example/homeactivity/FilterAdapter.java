@@ -7,6 +7,8 @@ import android.widget.ImageView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+
 import java.util.List;
 
 public class FilterAdapter extends RecyclerView.Adapter<FilterAdapter.MyViewHolder> {
@@ -44,7 +46,7 @@ public class FilterAdapter extends RecyclerView.Adapter<FilterAdapter.MyViewHold
     }
 
     public void onBindViewHolder(MyViewHolder holder, int position) {
-        holder.imageView.setImageResource(filters.get(position).getDrawable());
+        holder.imageView.setImageURI(filters.get(position).getPic());
     }
 
     @Override

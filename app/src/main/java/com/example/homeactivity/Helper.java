@@ -1,33 +1,26 @@
 package com.example.homeactivity;
 
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.graphics.Rect;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.View;
-import android.webkit.MimeTypeMap;
-import android.widget.FrameLayout;
 import android.widget.Toast;
-
-import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -36,7 +29,7 @@ import java.util.List;
 class Helper {
     private Uri fileURL;
 
-    static Bitmap rotateandflipBitmap(File file, float angle) throws IOException {
+    static Bitmap rotateandflipBitmap(File file, float angle) {
         Bitmap source;
         source = BitmapFactory.decodeFile(file.getAbsolutePath());
         Matrix matrix = new Matrix();
@@ -44,8 +37,8 @@ class Helper {
         matrix.postRotate(angle);
         Bitmap rotated = Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
         return rotated;
-
     }
+
     static Bitmap overlay(Bitmap bmp1, Bitmap bmp2, Rect rect) {
         Bitmap bmOverlay = Bitmap.createBitmap(bmp1.getWidth(), bmp1.getHeight(), bmp1.getConfig());
         Canvas canvas = new Canvas(bmOverlay);
@@ -85,24 +78,17 @@ class Helper {
         Bitmap filter = loadBitmapFromView(view);
         Bitmap filter2= resize(frame.width(),frame.height(),filter,rect);
         Bitmap newPic = Helper.overlay(pic, filter2 ,frame);
-
-        try{
-            File newfile = Helper.BitmaptoFile(newPic,file);
-        }
-        catch (IOException e){
-            Toast.makeText(context,"Couldn#t put filter on Pic.",Toast.LENGTH_LONG).show();
-        }
-
         fileURL = insertImage(context.getContentResolver(),newPic,file.getName(),file.toString());
+        file.delete();
         return newPic;
     }
 
 
-    static List<Filter> getAllFilters(Context context){
-        List<Filter> filters = new ArrayList<>();
+    static List<Defaultfilter> getAllFiltersDefault(Context context){
+        List<Defaultfilter> filters = new ArrayList<>();
         try {
             Resources res = context.getResources();
-            InputStreamReader in_s = new InputStreamReader(res.openRawResource(R.raw.pics));
+            InputStreamReader in_s = new InputStreamReader(res.openRawResource(R.raw.defaultpics));
 
             BufferedReader reader= new BufferedReader(in_s);
             String line;
@@ -112,7 +98,35 @@ class Helper {
                 infos=line.split(",");
                 int resID =context.getResources().getIdentifier(infos[0],"drawable",context.getPackageName());
                 try{
-                    filters.add(new Filter(resID,Integer.parseInt(infos[1])));
+                    filters.add(new Defaultfilter(resID,Integer.parseInt(infos[1])));
+                }
+                catch (NullPointerException e){
+                    e.printStackTrace();
+                }
+            }
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return filters;
+    }
+
+    static List<Filter> getAllFilters(File dir,File txt){
+        List<Filter> filters = new ArrayList<>();
+        try {
+            InputStream inputStream = new FileInputStream(txt);
+            InputStreamReader in_s = new InputStreamReader(inputStream);
+
+            BufferedReader reader= new BufferedReader(in_s);
+            String line;
+            String[] infos;
+
+            while((line=reader.readLine())!=null &&line.length()!=0){
+                infos=line.split(",");
+                File file = new File(dir, infos[0]);
+                try{
+                    filters.add(new Filter(Uri.fromFile(file),Integer.parseInt(infos[1])));
                 }
                 catch (NullPointerException e){
                     e.printStackTrace();

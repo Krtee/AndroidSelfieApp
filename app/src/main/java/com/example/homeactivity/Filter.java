@@ -3,6 +3,7 @@ package com.example.homeactivity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
@@ -16,17 +17,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Filter implements Parcelable {
-    private int drawable;
+    private Uri path;
     private int scalingfact;
 
-    Filter(int drawable, int scalingfact) {
-        this.drawable = drawable;
+    Filter(Uri path, int scalingfact) {
+        this.path = path;
         this.scalingfact = scalingfact;
     }
 
+    void setScalingfact(int scalingfact){
+        this.scalingfact=scalingfact;
+    }
 
-    int getDrawable() {
-        return drawable;
+
+    Uri getPic() {
+        return path;
     }
 
     int getScalingfact() {
@@ -40,7 +45,7 @@ public class Filter implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel out, int flags) {
-        out.writeInt(drawable);
+        out.writeString(path.toString());
         out.writeInt(scalingfact);
     }
 
@@ -59,7 +64,7 @@ public class Filter implements Parcelable {
     }
 
     private void readFromParcel(Parcel in) {
-        drawable = in.readInt();
+        path = Uri.parse(in.readString());
         scalingfact = in.readInt();
     }
 

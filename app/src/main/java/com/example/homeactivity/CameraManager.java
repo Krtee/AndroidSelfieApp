@@ -45,23 +45,6 @@ public class CameraManager {
 
         return preview;
     }
-/*
-    FrameLayout.LayoutParams setAspectRatioTextureView(int ResolutionWidth , int ResolutionHeight )
-    {
-        if(ResolutionWidth > ResolutionHeight){
-            int newWidth = DSI_width;
-            int newHeight = ((DSI_width * ResolutionWidth)/ResolutionHeight);
-            return new FrameLayout.LayoutParams(newWidth,newHeight);
-
-        }else {
-            int newWidth = DSI_width;
-            int newHeight = DSI_height;  //((DSI_width * ResolutionHeight)/ResolutionWidth);
-            return new FrameLayout.LayoutParams(newWidth,newHeight);
-        }
-
-    }
-
- */
 
     static ImageCapture createImageCapture() {
         ImageCaptureConfig.Builder imageCaptureConfig = new ImageCaptureConfig.Builder();

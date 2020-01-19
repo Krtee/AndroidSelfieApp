@@ -36,39 +36,32 @@ public class ImageSaver extends Thread{
     @Override
     public void run() {
         Bitmap pic;
-        try {
-            pic = Helper.rotateandflipBitmap(file, 90);
-            //Bitmap pic = BitmapFactory.decodeFile(file.getAbsolutePath());
-
-            /*
-            FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(pic);
-
-            FirebaseVisionFaceDetector detectImage = CameraManager.createDetector();
-            */
-
-            double[] filterXY= filter.getScaledCentre();
-            int width=(int)(pic.getHeight()*filter.getScaleXY());
-            int leftframe= (pic.getWidth()/2)-(width/2);
-            int rightframe = (pic.getWidth()/2)+(width/2);
-
-            Rect frame = new Rect(leftframe,0,rightframe,pic.getHeight());
-
-            int left= (int)(filterXY[0]*frame.width());
-            int top= (int)(filterXY[1]*pic.getHeight());
-            int right= (int)( filterXY[2]*frame.width());
-            int bottom= (int)(filterXY[3]*pic.getHeight());
+        pic = Helper.rotateandflipBitmap(file, 90);
 
 
-            Rect rect = new Rect(left,top,right,bottom);
+        double[] filterXY= filter.getScaledCentre();
+        int width=(int)(pic.getHeight()*filter.getScaleXY());
+        int leftframe= (pic.getWidth()/2)-(width/2);
+        int rightframe = (pic.getWidth()/2)+(width/2);
 
-            Helper helper=new Helper();
+        Rect frame = new Rect(leftframe,0,rightframe,pic.getHeight());
 
-            Bitmap newPic = helper.createPic(context, pic, filter,frame,rect , file);
-            final int THUMBSIZE = 500;
-            Bitmap thumb= ThumbnailUtils.extractThumbnail(newPic,
-                    thumbnailView.getWidth()-20, thumbnailView.getHeight()-20);
+        int left= (int)(filterXY[0]*frame.width());
+        int top= (int)(filterXY[1]*pic.getHeight());
+        int right= (int)( filterXY[2]*frame.width());
+        int bottom= (int)(filterXY[3]*pic.getHeight());
 
-            imageCaptureCallback.onImageCaptured(file,thumb,helper.getFileURL());
+
+        Rect rect = new Rect(left,top,right,bottom);
+
+        Helper helper=new Helper();
+
+        Bitmap newPic = helper.createPic(context, pic, filter,frame,rect , file);
+        final int THUMBSIZE = 500;
+        Bitmap thumb= ThumbnailUtils.extractThumbnail(newPic,
+                thumbnailView.getWidth()-20, thumbnailView.getHeight()-20);
+
+        imageCaptureCallback.onImageCaptured(file,thumb,helper.getFileURL());
 
             /*
             detectImage.detectInImage(image)
@@ -88,7 +81,7 @@ public class ImageSaver extends Thread{
                                             int height= Math.round(scaleY*scalingfact);
                                             System.out.println("width:"+width+ " "+ "height:"+height+" "+ scaleX+" "+scaleY);
                                             rect.set(rect.centerX()-width/2,rect.centerX()-height/2,rect.centerX()+width/2,rect.centerY()+height/2);
-                                            Bitmap newPic = Helper.createPic(context, pic, filter.getFilter().getDrawable(), rect, file);
+                                            Bitmap newPic = Helper.createPic(context, pic, filter.getFilter().getPic(), rect, file);
                                             final int THUMBSIZE = 500;
                                             Bitmap thumb= ThumbnailUtils.extractThumbnail(newPic,
                                                     thumbnailView.getWidth()-10, thumbnailView.getHeight()-10);
@@ -115,9 +108,6 @@ public class ImageSaver extends Thread{
              */
 
 
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+
     }
 }
