@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".TakePhotoActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/progressBarpnt"

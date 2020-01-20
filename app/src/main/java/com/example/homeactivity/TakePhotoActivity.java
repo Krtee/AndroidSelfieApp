@@ -41,7 +41,7 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 
 import java.io.File;
 
-public class MainActivity extends Activity implements LifecycleOwner {
+public class TakePhotoActivity extends Activity implements LifecycleOwner {
     private CameraManager cameraManager;
     private LifecycleRegistry lifecycleRegistry;
     private int REQUEST_CODE_PERMISSIONS = 101;
@@ -82,7 +82,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
         faceOverlay= findViewById(R.id.filter);
         faceOverlay.setVisibility(View.GONE);
         faceOverlay.setFilter(filter);
-        faceOverlay.init(MainActivity.this);
+        faceOverlay.init(TakePhotoActivity.this);
 
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -117,7 +117,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
                                 gallery.setImageBitmap(bitmap);
                                 setFileUri(fileUri);
                                 progressBar.setVisibility(View.GONE);
-                                Toast.makeText(MainActivity.this,"Worked.",Toast.LENGTH_LONG).show();
+                                Toast.makeText(TakePhotoActivity.this,"Worked.",Toast.LENGTH_LONG).show();
                             }
                         })
                 );
@@ -126,6 +126,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
         ImageButton back = findViewById(R.id.BackButton);
 
+        /*back to SelectFilterActivity*/
         back.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -134,6 +135,7 @@ public class MainActivity extends Activity implements LifecycleOwner {
             }
         });
 
+        /*opens Picture in Gallery*/
         gallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -142,14 +144,14 @@ public class MainActivity extends Activity implements LifecycleOwner {
                     startActivity(intent);
                 }
                 else {
-                    Toast.makeText(MainActivity.this,"No picture taken yet.",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TakePhotoActivity.this,"No picture taken yet.",Toast.LENGTH_SHORT).show();
                 }
             }
         });
     }
 
+    /*initialize Camera*/
     private void startCamera() {
-
         CameraX.unbindAll();
 
         detector = CameraManager.createDetector();
@@ -191,33 +193,41 @@ public class MainActivity extends Activity implements LifecycleOwner {
 
             FaceOverlay picOverlay = faceOverlay;
 
+            /*
+
+            starts ImageSaver-Thread for saving picture
+            *
+            *
+            */
 
             imageCapture.takePicture(file, new ImageCapture.OnImageSavedListener() {
                 @Override
                 public void onImageSaved(@NonNull File file) {
                     faceOverlay.setVisibility(View.GONE);
-                    Thread savingPic = new ImageSaver(MainActivity.this,file,picOverlay,imageCaptureCallback,gallery);
+                    Thread savingPic = new ImageSaver(TakePhotoActivity.this,file,picOverlay,imageCaptureCallback,gallery);
                     savingPic.start();
                     System.out.println("pic taken"+picOverlay.getWidth());
-                    Toast.makeText(MainActivity.this, "Img captured", Toast.LENGTH_LONG).show();
+                    Toast.makeText(TakePhotoActivity.this, "Img captured", Toast.LENGTH_LONG).show();
                     progressBar.setVisibility(View.VISIBLE);
                 }
 
                 @Override
                 public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
-                    Toast.makeText(MainActivity.this, "couldn take picture",
+                    Toast.makeText(TakePhotoActivity.this, "couldn take picture",
                             Toast.LENGTH_LONG).show();
                 }
             });
 
         } else {
             Toast.makeText(
-                    MainActivity.this,
+                    TakePhotoActivity.this,
                     "You may need to grant the camera permission!",
                     Toast.LENGTH_LONG).show();
         }
     }
 
+
+    /*analize preview picture, Facdetector recognize face and draws Retangle around it, also scaling filter over it*/
     private ImageAnalysis setAnalyzerTask() {
         imageAnalysis =CameraManager.createAnalyser();
         imageAnalysis.setAnalyzer(

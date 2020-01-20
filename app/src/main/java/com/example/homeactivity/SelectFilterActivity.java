@@ -3,11 +3,9 @@ package com.example.homeactivity;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Context;
@@ -15,11 +13,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.view.View;
 import android.widget.Toast;
 
@@ -28,7 +23,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -68,7 +62,7 @@ public class SelectFilterActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
 
-
+        /*Starts Activity to create Filter*/
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -86,13 +80,16 @@ public class SelectFilterActivity extends AppCompatActivity {
         });
 
         recyclerView.addOnItemTouchListener(new RecyclerItemOnClick(SelectFilterActivity.this, recyclerView, new RecyclerItemOnClick.OnItemClickListener() {
+
+            /*starts CameraActivity*/
             @Override
             public void onItemClick(View view, int position) {
-                Intent intent = new Intent(SelectFilterActivity.this,MainActivity.class);
+                Intent intent = new Intent(SelectFilterActivity.this, TakePhotoActivity.class);
                 intent.putExtra("filtermask",filters.get(position));
                 startActivity(intent);
             }
 
+            /*delete Filter*/
             @Override
             public void onLongItemClick(View view, int position) {
                 File todelete= new File(filters.get(position).getPic().getPath());
@@ -148,7 +145,7 @@ public class SelectFilterActivity extends AppCompatActivity {
 
         }
     }
-
+        /*stores Defaultfilter in interal storage,when first installed*/
     void init(){
         newdir= SelectFilterActivity.this.getDir("filters", Context.MODE_PRIVATE);
         textfiles = SelectFilterActivity.this.getDir("textfiles",Context.MODE_PRIVATE);

@@ -102,7 +102,7 @@ public class FilterResizeActivity extends AppCompatActivity {
         }
     }
 
-
+    /*buttons for increasing,decreasing and saving the scalingfact*/
     private void setButtons(){
         Button small = findViewById(R.id.small);
         small.setOnClickListener(new View.OnClickListener() {
@@ -144,7 +144,7 @@ public class FilterResizeActivity extends AppCompatActivity {
         });
     }
 
-
+     /*initialize Camera*/
     private void startCamera() {
 
         CameraX.unbindAll();
@@ -174,6 +174,7 @@ public class FilterResizeActivity extends AppCompatActivity {
                 });
     }
 
+    /*analize downscaled preview picture, Facdetector recognize face and draws Retangle around it, also scaling filter over it*/
     private ImageAnalysis setAnalyzerTask() {
         imageAnalysis =CameraManager.createAnalyser();
         imageAnalysis.setAnalyzer(

@@ -28,7 +28,7 @@ public class CameraManager {
         this.DSI_height=DSI_height;
         this.DSI_width= DSI_width;
     }
-
+    /*preview initializer*/
     Preview createPreview() {
         Rational rational=new Rational(DSI_width,DSI_height);
 
@@ -46,6 +46,7 @@ public class CameraManager {
         return preview;
     }
 
+    /*imageCAPTURE initializer*/
     static ImageCapture createImageCapture() {
         ImageCaptureConfig.Builder imageCaptureConfig = new ImageCaptureConfig.Builder();
         imageCaptureConfig.setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY);
@@ -56,7 +57,7 @@ public class CameraManager {
         return imageCapture;
     }
 
-
+    /*FaceDetector initializer*/
     static FirebaseVisionFaceDetector createDetector(){
         FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions.Builder()
                 .setPerformanceMode(FirebaseVisionFaceDetectorOptions.FAST)
@@ -69,6 +70,7 @@ public class CameraManager {
 
     }
 
+    /*ImageAnalysis initializer*/
     static ImageAnalysis createAnalyser(){
         HandlerThread analyzerThread = new HandlerThread("FaceDetectionAnalyzer");
         analyzerThread.start();

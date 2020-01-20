@@ -50,7 +50,7 @@ public class FaceOverlay extends RelativeLayout {
     }
 
 
-
+    /*sets the Postion of the View*/
     void rePosistion(){
         this.setX((float)(screen.width-(screen.width*scaleX)-(float)this.getWidth()/(float)2.5));
         this.setY((float)(screen.height*scaleY-(float) this.getHeight()/(float)1.3)) ;
@@ -63,6 +63,8 @@ public class FaceOverlay extends RelativeLayout {
         scaleXY=(double)screen.width/screen.height;
     }
 
+
+    /*Sets the Size of the View*/
     double[] getScaledCentre(){
         double[] coords = new double[4];
         coords[0]= this.getX()/screen.width;

@@ -84,6 +84,7 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
         croppedImage.setOnTouchListener(this);
     }
 
+    /*initialize cropping image*/
     @SuppressWarnings("deprecation")
     void initcanvas() {
         Intent intent= getIntent();
@@ -115,6 +116,7 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
 
     }
 
+    /*Method for saving touchpoints ord deleting them*/
     public boolean onTouch(View v, MotionEvent event) {
         int action = event.getAction();
 
@@ -188,6 +190,7 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
         return true;
     }
 
+    /*marking cropped image*/
     public void crop() {
 
         clipPath.close();
@@ -223,7 +226,7 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
 
     }
 
-
+    /*save cropped to internalstorage*/
     private void save() {
 
         if(clipPath != null) {

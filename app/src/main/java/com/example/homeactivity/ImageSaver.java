@@ -33,6 +33,11 @@ public class ImageSaver extends Thread{
         this.thumbnailView = thumbnailView;
     }
 
+    /*calculate size and coordinates of the FilterView in depending on the saved imageSize and saves Image with the filter in the gallery
+    *
+    *
+    * */
+
     @Override
     public void run() {
         Bitmap pic;

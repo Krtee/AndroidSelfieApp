@@ -29,6 +29,7 @@ import java.util.List;
 class Helper {
     private Uri fileURL;
 
+    /*rotates and flips a imageFile*/
     static Bitmap rotateandflipBitmap(File file, float angle) {
         Bitmap source;
         source = BitmapFactory.decodeFile(file.getAbsolutePath());
@@ -39,6 +40,8 @@ class Helper {
         return rotated;
     }
 
+
+    /*overlays one Bitmap over the other*/
     static Bitmap overlay(Bitmap bmp1, Bitmap bmp2, Rect rect) {
         Bitmap bmOverlay = Bitmap.createBitmap(bmp1.getWidth(), bmp1.getHeight(), bmp1.getConfig());
         Canvas canvas = new Canvas(bmOverlay);
@@ -47,6 +50,7 @@ class Helper {
         return bmOverlay;
     }
 
+    /*Resize Bitmap */
     static Bitmap resize(int width,int height, Bitmap bmp2, Rect rect) {
         Bitmap bmOverlay = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmOverlay);
@@ -54,7 +58,7 @@ class Helper {
         return bmOverlay;
     }
 
-
+        /*load Bitmaps from View*/
     static Bitmap loadBitmapFromView(View v) {
         Bitmap b = Bitmap.createBitmap( v.getWidth(), v.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(b);
@@ -73,7 +77,7 @@ class Helper {
         fos.close();
         return file;
     }
-
+        /*Saves Picture with filter on it in the Media-Gallery*/
     Bitmap createPic(Context context,Bitmap pic,FaceOverlay view, Rect frame,Rect rect, File file){
         Bitmap filter = loadBitmapFromView(view);
         Bitmap filter2= resize(frame.width(),frame.height(),filter,rect);
@@ -83,7 +87,7 @@ class Helper {
         return newPic;
     }
 
-
+        /*returns List with all Defaultfilters*/
     static List<Defaultfilter> getAllFiltersDefault(Context context){
         List<Defaultfilter> filters = new ArrayList<>();
         try {
@@ -112,6 +116,8 @@ class Helper {
         return filters;
     }
 
+
+    /*returns List with all Filters*/
     static List<Filter> getAllFilters(File dir,File txt){
         List<Filter> filters = new ArrayList<>();
         try {
@@ -141,6 +147,7 @@ class Helper {
     }
 
 
+        /*Saves Image in MediaGallery*/
     static Uri insertImage(ContentResolver cr,
                                            Bitmap source,
                                            String title,
