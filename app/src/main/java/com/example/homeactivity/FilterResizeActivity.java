@@ -69,7 +69,7 @@ public class FilterResizeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_filter_resize);
 
         ActionBar actionBar = FilterResizeActivity.this.getSupportActionBar();
-        actionBar.setTitle("Selfie-App");
+        actionBar.setTitle("Configure the Size of your Filter!");
 
         Intent intent = getIntent();
         fileUri = Uri.parse(intent.getStringExtra("imagepath"));

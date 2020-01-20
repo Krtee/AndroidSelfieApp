@@ -55,7 +55,6 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
     float smallx,smally,largex,largey;
     Paint cpaint;
     Bitmap temporary_bitmap;
-    private ProgressDialog pDialog;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -63,10 +62,9 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
         setContentView(R.layout.activity_crop_activity);
 
         ActionBar actionBar = CropActivity.this.getSupportActionBar();
-        actionBar.setTitle("Selfie-App");
+        actionBar.setTitle("Crop your Filter!");
 
 
-        pDialog = new ProgressDialog(CropActivity.this);
         croppedImage = (ImageView) findViewById(R.id.im_crop_image_view);
         cropModelArrayList = new ArrayList<>();
         btn_ok = (Button) findViewById(R.id.cropbutton);
@@ -86,7 +84,7 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
         croppedImage.setOnTouchListener(this);
     }
 
-
+    @SuppressWarnings("deprecation")
     void initcanvas() {
         Intent intent= getIntent();
 
@@ -98,7 +96,8 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
             }
             else {
                 ImageDecoder.Source source = ImageDecoder.createSource(CropActivity.this.getContentResolver(), uri);
-                bmp = ImageDecoder.decodeBitmap(source);
+                Bitmap decodeBitmap = ImageDecoder.decodeBitmap(source);
+                bmp=decodeBitmap.copy(Bitmap.Config.ARGB_8888,false);
             }
         }
         catch (IOException e){
@@ -107,7 +106,7 @@ public class CropActivity extends AppCompatActivity implements View.OnTouchListe
         }
 
 
-        alteredBitmap = Bitmap.createBitmap(screen_width, screen_height, bmp.getConfig());
+        alteredBitmap = Bitmap.createBitmap(screen_width, screen_height,Bitmap.Config.ARGB_8888);
         canvas = new Canvas(alteredBitmap);
         paint = new Paint();
         paint.setColor(Color.BLACK);

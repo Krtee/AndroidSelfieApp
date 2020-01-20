@@ -63,51 +63,5 @@ public class ImageSaver extends Thread{
 
         imageCaptureCallback.onImageCaptured(file,thumb,helper.getFileURL());
 
-            /*
-            detectImage.detectInImage(image)
-                    .addOnSuccessListener(
-                            new OnSuccessListener<List<FirebaseVisionFace>>() {
-                                @Override
-                                public void onSuccess(List<FirebaseVisionFace> firebaseVisionFaces) {
-                                    if (firebaseVisionFaces != null && firebaseVisionFaces.size() != 0) {
-                                        for (FirebaseVisionFace face : firebaseVisionFaces) {
-
-                                            Rect rect = face.getBoundingBox();
-                                            System.out.println("Rect:" + rect.width() + " " + rect.height()+" "+pic.getWidth()+" "+pic.getHeight());
-                                            int scalingfact = filter.getFilter().getScalingfact();
-                                            float scaleX=(float)rect.width()/pic.getWidth();
-                                            float scaleY=(float)rect.height()/pic.getHeight();
-                                            int width= Math.round(scaleX*scalingfact);
-                                            int height= Math.round(scaleY*scalingfact);
-                                            System.out.println("width:"+width+ " "+ "height:"+height+" "+ scaleX+" "+scaleY);
-                                            rect.set(rect.centerX()-width/2,rect.centerX()-height/2,rect.centerX()+width/2,rect.centerY()+height/2);
-                                            Bitmap newPic = Helper.createPic(context, pic, filter.getFilter().getPic(), rect, file);
-                                            final int THUMBSIZE = 500;
-                                            Bitmap thumb= ThumbnailUtils.extractThumbnail(newPic,
-                                                    thumbnailView.getWidth()-10, thumbnailView.getHeight()-10);
-                                            Helper.notifyNewFileToSystem(context,file);
-                                            //Bitmap scaled = Helper.resize(newPic,thumbnailView.getWidth(),thumbnailView.getHeight());
-                                            imageCaptureCallback.onImageCaptured(file,thumb);
-
-
-                                        }
-                                    }
-                                }
-                            }
-                    )
-                    .addOnFailureListener(
-                            new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                    )
-            ;
-
-             */
-
-
-
     }
 }

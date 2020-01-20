@@ -29,7 +29,6 @@ public class Filter implements Parcelable {
         this.scalingfact=scalingfact;
     }
 
-
     Uri getPic() {
         return path;
     }
